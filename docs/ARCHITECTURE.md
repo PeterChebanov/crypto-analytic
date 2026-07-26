@@ -62,18 +62,18 @@ Each “agent” = node/subgraph: its tools, its slice of state, its structured 
 
 ## 3. Data and artifacts
 
-**Run state (in graph):** `asset`, `horizon`, `question`, `plan`, `collected_evidence[]`, `gaps[]`, `analysis`, `critique`, `report`, `decision_card`, `status`, `errors`.
+**Run state (in graph):** `cryptocurrency`, `period`, `question`, `plan`, `facts[]`, `gaps[]`, `analysis`, `critique`, `report`, `decision_card`, `status`, `errors`.
 
 **Postgres (minimum):**
 
-- `research_runs` — status, input, timestamps
-- `evidence_items` — fact, source_url, source_type, raw_ref, run_id
+- `research_runs` — status, input (`cryptocurrency`, `period`, `question`), timestamps
+- `facts` — one collected finding: title, summary, source_url, source_type, raw, run_id
 - `reports` — brief JSON/Markdown, decision card, version
 - `source_snapshots` — raw audit material (or object storage later)
 
-**Redis:** market snapshot cache, debounce duplicate starts, distributed lock on `asset+day`.
+**Redis:** market snapshot cache, debounce duplicate starts, distributed lock on `cryptocurrency+day`.
 
-**Vectors:** embeddings of evidence/chunks for dedupe and “similar past research”.
+**Vectors:** embeddings of facts/chunks for dedupe and “similar past research”.
 
 ---
 
@@ -85,7 +85,7 @@ Each “agent” = node/subgraph: its tools, its slice of state, its structured 
 2. LangChain: Chat Model, Prompt Templates, Tools, Structured Output, Runnables
 3. LangGraph: State, nodes, conditional edges, checkpointing
 4. LangSmith: tracing (+ simple evals on brief/evidence)
-5. PostgreSQL + schema + indexes for run/evidence queries
+5. PostgreSQL + schema + indexes for run/facts queries
 6. Redis: cache + lock
 7. Collectors: **News** + **Market** (GitHub right after if time)
 8. Analysis + Critic + Final Report (structured)
@@ -94,7 +94,7 @@ Each “agent” = node/subgraph: its tools, its slice of state, its structured 
 ### P1 — Post-MVP Stage 1 (strongly desired)
 
 - GitHub/Dev agent
-- pgvector + retrieval over past evidence
+- pgvector + retrieval over past facts
 - Scheduler (daily re-research)
 - Human-in-the-loop interrupt (approve plan)
 - Run idempotency, solid error handling, structured logging
@@ -114,7 +114,7 @@ Each “agent” = node/subgraph: its tools, its slice of state, its structured 
 |-------|---------------------|------------------|
 | Tokens, context, streaming | LLM basics | Prompt budgets, stream brief via API |
 | Tool / function calling | Agent core | All collectors call HTTP/SQL tools |
-| Structured output | Reliable contracts | Plan, evidence, decision card, report |
+| Structured output | Reliable contracts | Plan, Fact, DecisionCard, ResearchReport |
 | Prompt templates / runnables | LangChain baseline | Shared node style |
 | LangGraph State | Orchestration | Entire run state |
 | Conditional edges | Routing | More collect / re-analyze loops |
@@ -122,7 +122,7 @@ Each “agent” = node/subgraph: its tools, its slice of state, its structured 
 | HITL / interrupt | Production agents | Approve plan |
 | LangSmith tracing | Debug | Every run |
 | LangSmith evals | Quality | Citations, no invented URLs |
-| Postgres + indexes | Data eng | Run/evidence queries, FKs |
+| Postgres + indexes | Data eng | Run/facts queries, FKs |
 | Redis | Infra | Cache, locks |
 | Embeddings / vector search | RAG-lite | Dedupe + research memory |
 | Kafka (P2) | Event systems | Async news/market events |

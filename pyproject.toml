@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "AI Crypto Intelligence Platform — research + decision support"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "psycopg>=3.3.4",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "sqlalchemy>=2.0.51",
+]
 
 [build-system]
 requires = ["hatchling"]

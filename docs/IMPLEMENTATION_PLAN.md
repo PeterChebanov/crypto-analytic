@@ -14,11 +14,13 @@
 | Teaching step | Agent does | Student does |
 |---------------|------------|--------------|
 | **1. Architecture** | Explains what this stage builds, how it works alone, how it plugs into the full system | Asks until clear; logs notes in `PROGRESS.md` |
-| **2. Technologies & theory** | Lists stack + theory prerequisites; web-research if APIs/docs may have changed | Studies / asks; no coding until clear |
-| **3. Sequential implementation** | Ordered checklist including git, folders, env, commands, tiny commits | Implements by hand; may request chat snippets |
-| **4. Testing / AI Security / AI QA** | Defines test levels, security checks, eval ideas | Writes tests; asks until clear |
+| **2. Technologies & theory** | Lists stack + theory prerequisites + docs to read; web-research if APIs/docs may have changed | Studies / asks; no coding until ready |
+| **3. Sequential implementation** | **One file or command block at a time** in order; explains why; waits for student questions | Rewrites by hand; asks; confirms before next file |
+| **4. Testing / AI Security / AI QA** | Same one-step delivery for tests/security checks | Writes tests; asks until clear |
 
-Do not start Teaching Step 3 of a stage until Steps 1–2 are understood. Do not start the next stage until Step 4 of the current stage is done (or explicitly deferred with a note in `PROGRESS.md`).
+Do not start Teaching Step 3 of a stage until Steps 1–2 are understood (or the student explicitly asks to start coding and accepts learning theory alongside the first files). Do not start the next stage until Step 4 of the current stage is done (or explicitly deferred with a note in `PROGRESS.md`).
+
+**Project-wide:** agent never writes app code into the repo; senior+ self-review on every snippet; teach secrets/config proactively.
 
 ---
 
@@ -107,26 +109,26 @@ Do in order:
 - Pydantic v2 models, enums, validation
 - Domain vs API schema separation (even if thin at first)
 - SQLAlchemy 2.x + Alembic migrations
-- Postgres types, PK/FK, **why indexes** (B-tree, composite `(asset, created_at)`, uniqueness for dedupe)
+- Postgres types, PK/FK, **why indexes** (B-tree, composite `(cryptocurrency, created_at)`, uniqueness for dedupe)
 - Transactions and idempotent inserts (conceptual)
 
 ### Teaching Step 3 — Sequential implementation
 
 1. Add deps: `pydantic`, `sqlalchemy`, `alembic`, `psycopg` (or async driver — pick one and stay consistent; sync is fine for MVP).
-2. Create `src/crypto_intel/domain/` models: `ResearchRequest`, `EvidenceItem`, `DecisionCard`, `ResearchReport`, `RunStatus`, `Critique` stub.
+2. Create `src/crypto_intel/domain/` models: `ResearchRequest`, `Fact`, `DecisionCard`, `ResearchReport`, `RunStatus`, `Critique`.
 3. Create `src/crypto_intel/db/` engine/session factory reading `DATABASE_URL`.
-4. Define ORM tables: `research_runs`, `evidence_items`, `reports` (+ optional `source_snapshots`).
+4. Define ORM tables: `research_runs`, `facts`, `reports` (+ optional `source_snapshots`).
 5. `alembic init`; configure to use app metadata; write first migration with indexes:
-   - `research_runs(asset, created_at)`
-   - `evidence_items(run_id)` FK
+   - `research_runs(cryptocurrency, created_at)`
+   - `facts(run_id)` FK
    - unique or fingerprint constraint for dedupe if designed
 6. Apply migration against Compose Postgres.
-7. Small repository/DAO functions: `create_run`, `add_evidence`, `save_report`, `get_run`.
+7. Small repository/DAO functions: `create_run`, `add_fact`, `save_report`, `get_run`.
 8. Unit tests for pydantic round-trip; integration test for insert/select (pytest + test DB or Compose).
 9. Commit: `feat: add domain models and postgres schema`.
 10. Update `PROGRESS.md`.
 
-**Done when:** migration applies; tests pass; can CRUD a run with evidence.
+**Done when:** migration applies; tests pass; can CRUD a run with facts.
 
 ### Teaching Step 4 — Testing / AI Security / AI QA
 
@@ -161,7 +163,7 @@ Do in order:
 1. Add LLM deps (`langchain`, provider package, `langchain-openai` or chosen provider).
 2. Config module loads API keys from env; fail fast if missing in non-test.
 3. `llm/client.py`: build chat model from settings.
-4. Script/module: sync invoke with a fixed prompt about a stub asset.
+4. Script/module: sync invoke with a fixed prompt about a stub cryptocurrency.
 5. Script/module: streaming tokens to stdout.
 6. `structured/decision_card.py`: generate `DecisionCard` from stub evidence; validate with pydantic; retry once on parse failure.
 7. `tools/manual_loop.py`: one tool (`get_mock_price` or live simple price HTTP); loop: model → tool_call → execute → observe → final answer; log each phase clearly.
@@ -276,19 +278,19 @@ Do in order:
 - `httpx` timeouts, retries, backoff
 - API rate limits and caching TTL
 - Redis: GET/SET/EXPIRE, distributed locks (token + NX + TTL)
-- Idempotency keys `research:{asset}:{date}`
+- Idempotency keys `research:{cryptocurrency}:{date}`
 - Normalizing market units; always storing `source_url` / provider ref for news
 - Provider ToS / key rotation basics
 
 ### Teaching Step 3 — Sequential implementation
 
 1. Add Redis client config from `REDIS_URL`.
-2. Implement Market tool(s): fetch snapshot; cache under TTL; map to `EvidenceItem`.
-3. Implement News tool(s): headlines + URLs; filter empties; map to `EvidenceItem`.
+2. Implement Market tool(s): fetch snapshot; cache under TTL; map to `Fact`.
+3. Implement News tool(s): headlines + URLs; filter empties; map to `Fact`.
 4. Swap mocks in graph for real tools behind settings flag (`USE_MOCK_TOOLS=false`).
 5. Implement lock around run start; second concurrent start fails or no-ops cleanly.
 6. Error handling: classify retryable vs fatal; write errors into state.
-7. Manual E2E run on one asset (e.g. BTC or ETH).
+7. Manual E2E run on one cryptocurrency (e.g. BTC or ETH).
 8. Commits; update `PROGRESS.md`.
 
 **Done when:** cache hit on second market call; lock works; evidence in DB has real URLs/fields; graph still completes.
@@ -314,7 +316,7 @@ Do in order:
 ### Teaching Step 2 — Technologies & theory
 
 - What is measurable: citations present, stance in enum, invalidation present, unsupported claims
-- LangSmith: projects, traces, metadata (`run_id`, `asset`)
+- LangSmith: projects, traces, metadata (`run_id`, `cryptocurrency`)
 - Offline evals vs online vibe checks
 - Prompt versioning mindset (even if simple constants first)
 - Web-research current LangSmith setup
@@ -412,7 +414,7 @@ Do in order:
 
 1. GitHub tools + graph node (or enable stub → real).
 2. Migration: embedding column / pgvector extension; embed evidence on write.
-3. Query helper: top-k similar evidence for asset/question; feed into Analysis context carefully (budgeted).
+3. Query helper: top-k similar facts for cryptocurrency/question; feed into Analysis context carefully (budgeted).
 4. HITL: interrupt after Planner; `POST /research/{id}/approve`; resume from checkpoint.
 5. Harden errors/retries/metrics counters (even simple).
 6. Scheduler daily watchlist documented and tested once.

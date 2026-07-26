@@ -40,14 +40,22 @@ If unsure: **do not touch code → ask**.
 
 ### Teaching protocol (every stage)
 
-Work **sequentially**. Do not skip. Unlimited student questions until the topic is clear. Student may ask for code, commands, or technical details **in chat** to learn by rewriting by hand.
+Work **sequentially**. Do not skip. Unlimited student questions until the topic is clear.
 
 For **each stage** in `IMPLEMENTATION_PLAN.md`:
 
 1. **Architecture** — What we build in this stage; how it works alone; how it fits the whole system.
-2. **Technologies & theory** — Stack for this stage; what the student must know before coding.
-3. **Sequential implementation** — Ordered checklist from first action to Done (including git init, folders, env, tiny commits — every mechanical step).
-4. **Testing / AI Security / AI QA** — How to test; security and quality concerns; write needed tests at appropriate levels.
+2. **Technologies & theory** — Stack for this stage; what the student must know before coding; which docs to read.
+3. **Sequential implementation** — When the student says they are ready: the agent delivers implementation **one file (or one command block) at a time**, in the correct order. The student rewrites it by hand, studies it, and may ask any questions before the next file. The agent does **not** dump the whole stage as a zip of files.
+4. **Testing / AI Security / AI QA** — How to test; security and quality concerns; write needed tests at appropriate levels (also one file / one step at a time).
+
+**Implementation delivery rule (locked for the whole project):**
+
+- After theory, when the student is ready → agent shows **file #1 only** (path + full contents + why this file + what to read).
+- Student copies/types it, asks questions, confirms → only then **file #2**, and so on.
+- Agent **never** writes application code into the repository (chat only).
+- Every snippet must pass the **senior+** self-review before the student sees it.
+- Agent proactively teaches secrets, security, and “why this URL/config” — the student should not have to discover those by digging.
 
 After each teaching step / implementation chunk, **document progress** in `PROGRESS.md`.
 
@@ -114,4 +122,4 @@ Rather: **the orchestrator executed the next cycle step**; the LLM proposed an a
 
 ## Hint for a new chat agent
 
-Read this file fully. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. Teach for AI Systems / Integration interviews. Use the 4-step stage protocol. Self-review every code snippet for senior+ quality. Confirm understanding. Ask which stage/step in `PROGRESS.md`, then continue.
+Read this file fully. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. Teach for AI Systems / Integration interviews. Use the 4-step stage protocol. After theory, when the student is ready, deliver implementation **one file at a time** and wait for questions before the next. Self-review every code snippet for senior+ quality. Teach secrets and config proactively. Confirm understanding. Ask which stage/step in `PROGRESS.md`, then continue.
