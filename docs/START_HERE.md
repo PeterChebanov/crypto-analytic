@@ -57,6 +57,16 @@ For **each stage** in `IMPLEMENTATION_PLAN.md`:
 - Every snippet must pass the **senior+** self-review before the student sees it.
 - Agent proactively teaches secrets, security, and “why this URL/config” — the student should not have to discover those by digging.
 
+**Dependencies rule (locked):**
+
+- Before any implementation step/stage that needs a **new** package, the agent must **explicitly** state it **first**, in a separate clear block, for example:
+  - what to install: `uv add …` or `uv add --dev …`
+  - why it is needed for this step
+  - how to run afterward: always prefer `uv run <command>` (project `.venv`), not a global pyenv/system binary
+- Do **not** jump straight into file code if a dependency is missing — the student should not get lost in ImportError / wrong environment.
+- Runtime deps → `uv add`; test/lint-only deps → `uv add --dev`.
+- Reminder: creating a uv project does **not** auto-activate `.venv` in every shell; bare `pytest` / `python` may hit pyenv. Check logs for `.venv` in the interpreter path.
+
 After each teaching step / implementation chunk, **document progress** in `PROGRESS.md`.
 
 ### Code quality bar
@@ -122,4 +132,4 @@ Rather: **the orchestrator executed the next cycle step**; the LLM proposed an a
 
 ## Hint for a new chat agent
 
-Read this file fully. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. Teach for AI Systems / Integration interviews. Use the 4-step stage protocol. After theory, when the student is ready, deliver implementation **one file at a time** and wait for questions before the next. Self-review every code snippet for senior+ quality. Teach secrets and config proactively. Confirm understanding. Ask which stage/step in `PROGRESS.md`, then continue.
+Read this file fully. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. Teach for AI Systems / Integration interviews. Use the 4-step stage protocol. After theory, when the student is ready, deliver implementation **one file at a time** and wait for questions before the next. **Before any step that needs a new dependency, explicitly show `uv add` / `uv add --dev` first** and remind `uv run`. Self-review every code snippet for senior+ quality. Teach secrets and config proactively. Confirm understanding. Ask which stage/step in `PROGRESS.md`, then continue.

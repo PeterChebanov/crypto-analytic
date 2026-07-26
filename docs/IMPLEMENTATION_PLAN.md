@@ -20,7 +20,7 @@
 
 Do not start Teaching Step 3 of a stage until Steps 1–2 are understood (or the student explicitly asks to start coding and accepts learning theory alongside the first files). Do not start the next stage until Step 4 of the current stage is done (or explicitly deferred with a note in `PROGRESS.md`).
 
-**Project-wide:** agent never writes app code into the repo; senior+ self-review on every snippet; teach secrets/config proactively.
+**Project-wide:** agent never writes app code into the repo; senior+ self-review on every snippet; teach secrets/config proactively. **New dependencies must be announced with explicit `uv add` / `uv add --dev` before implementation code for that step.** Prefer `uv run` so tools use project `.venv`.
 
 ---
 

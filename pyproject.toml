@@ -21,3 +21,8 @@ packages = ["src/crypto_intel"]
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
