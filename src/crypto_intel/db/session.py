@@ -11,14 +11,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from crypto_intel.settings import get_settings
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def get_engine() -> Engine:
-    settings = get_settings()
-    return create_engine(
-        settings.database_url,
-        pool_pre_ping=True,
-        future=True,
-    )
+   return create_engine(
+      get_settings().postgres.url,
+      pool_pre_ping=True,
+      future=True 
+   ) 
 
 
 @lru_cache(maxsize=1)

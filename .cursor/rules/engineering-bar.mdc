@@ -1,0 +1,46 @@
+---
+description: Production engineering bar — layered config, integration factories, KISS/DRY/SOLID
+alwaysApply: true
+---
+
+# Engineering bar (re-read before every step)
+
+Learning project, but **code must be production-ready**. Teaching in chat; codebase is not a sandbox.
+
+## Before any new snippet or step
+
+1. **Re-read this rule** and `docs/START_HERE.md`.
+2. **Inspect the codebase** — reuse existing settings slices, factories, domain, repository.
+3. **Self-review** every snippet before the student copies it.
+
+## Architecture: config and connections (locked)
+
+**One env file, structured settings, separate integration modules.**
+
+| Layer | Responsibility | Example path |
+|-------|----------------|--------------|
+| **Settings root** | Load `.env` once; group fields by integration | `settings.py` → `get_settings()` |
+| **Config slices** | Typed view per integration (only fields that integration needs) | `settings.xai`, `settings.postgres`, `settings.redis` |
+| **Integration factory** | Build client/engine from its slice only | `db/session.py`, `llm/client.py`, `redis/client.py` |
+| **Business logic** | Depends on **clients/protocols**, never raw `Settings` | `repository.py`, graph nodes |
+
+Rules:
+
+- **Not a junk drawer in code** — flat `Settings` for env load is OK; pass **slices** or **clients** downward, not the whole object everywhere.
+- **Not one mega “database factory”** for Postgres + Redis + Kafka — different protocols, different modules, different factories.
+- **One factory per integration**, obvious name: `get_engine()` / `session_scope()`, `get_redis()`, `build_xai_chat_model()`.
+- Add a new backend (Anthropic, Kafka) → new **settings slice** + new **module** + new **factory**; do not bolt onto unrelated files.
+- **YAGNI** — no Kafka module until the stage needs it; but **folder and pattern** are decided up front.
+
+## Code bar (non-negotiable)
+
+- **Code first, tests second** — correct production shape; adapt tests/env to code.
+- **No crutches** — no `assert`/casts/`# type: ignore` for types; no duplicate validation; no optional+`require_*` dances.
+- **KISS** — one clear path: `get_settings()` loads required config or fails at startup.
+- **DRY** — validation and env mapping live in settings once.
+- **SOLID** — factories wire; they do not re-validate; business code does not read env vars directly.
+- **Secrets** — `SecretStr`; never log secret values.
+
+## Fail the step if
+
+Duplicate checks, type lies, code bent around tests, passing full `Settings` into layers that only need one slice, or a new integration without its own module/factory.

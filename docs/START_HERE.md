@@ -71,8 +71,9 @@ After each teaching step / implementation chunk, **document progress** in `PROGR
 
 ### Code quality bar
 
-All code discussed and written by the student must target **senior+** quality:
+All code discussed and written by the student must target **senior+** / **production-ready** quality (learning project ≠ toy code):
 
+- Always-on Cursor rule (re-read before every step): `.cursor/rules/engineering-bar.mdc` — no crutches; KISS, DRY, SOLID; inspect existing codebase before inventing new pieces.
 - justified design patterns (not pattern theater);
 - encapsulation, clear boundaries;
 - **DRY** and **KISS** where they help;
@@ -80,6 +81,25 @@ All code discussed and written by the student must target **senior+** quality:
 - no secret leakage, no sloppy `.env` in git.
 
 After **every** code block the agent pastes in chat, the agent **must self-review** against this bar and fix the snippet in chat before the student copies it.
+
+### Config and connections layout (locked)
+
+Production shape from day one — **clear separation**, not boilerplate for its own sake:
+
+```
+.env  →  get_settings()  →  config slices (.postgres, .redis, .xai, …)
+                                    ↓
+              per-integration factories (db/, redis/, llm/, messaging/ later)
+                                    ↓
+              business code (repository, graph nodes) — clients only, not Settings
+```
+
+- **One settings root** loads environment once (12-factor). Group fields by integration; expose **typed slices** (`settings.xai`, not “pass everything”).
+- **One module + one factory per integration** — e.g. `db/session.py` for Postgres, `redis/client.py` for Redis, `llm/client.py` for xAI. **No** single factory that “returns Postgres or Redis or Kafka” — different systems, different factories.
+- Add Anthropic / GPT / Kafka later → new slice in settings + new module; do not inflate unrelated files.
+- **Avoid over-engineering**: no registry/framework until a second provider or backend actually ships; pattern is fixed early, code grows when needed.
+
+See `.cursor/rules/engineering-bar.mdc` (always apply).
 
 ---
 
