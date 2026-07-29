@@ -22,39 +22,31 @@ Template for each entry:
 
 ## Current position
 
-- **Stage:** 2 — LLM integration layer (production modules)
-- **Policy locked (2026-07-29):** production-first — no new throwaway demos/sandbox CLIs; permanent product modules + tests only. Existing `chat_demo` (if present) is legacy; do not expand.
-- **Done in Stage 2 so far:** settings slices (`postgres`/`redis`/`xai`), `llm/client.py` (`build_xai_chat_model`), layered config pattern
-- **Next:** Stage 2 remaining — structured `DecisionCard` product module + tool executor (permanent); then tests
+- **Stage:** 2 — LLM integration layer → **DONE**
+- **Next stage:** 3 — LangChain building blocks (prompts, runnables, tools registry)
 - **Provider:** xAI Grok — `XAI_API_KEY`, `XAI_BASE_URL`, model `grok-4.5`
-- **MVP:** not complete (Stages 2–7 remain)
+- **MVP:** not complete (Stages 3–7 remain)
 - **Post-MVP 1 / 2:** locked until MVP DoD
+- **Policy:** production-first (no throwaway demos)
 
 ### Resume checklist (new chat)
 
-1. Read `docs/START_HERE.md` — especially **Production-first policy**.
-2. Re-read `.cursor/rules/engineering-bar.mdc` before proposing any file.
-3. Read this file + `IMPLEMENTATION_PLAN.md` Stage 2 (revised).
-4. Confirm Stage 1 green: `uv run pytest tests/ -v`
-5. Continue Stage 2 with **product** modules only (structured DecisionCard → tool executor → tests). No chat demos.
+1. Read `docs/START_HERE.md` — Production-first policy.
+2. Re-read `.cursor/rules/engineering-bar.mdc`.
+3. Confirm green: `uv run pytest tests/ -v` (13 passed as of Stage 2 close).
+4. Start **Stage 3 / Teaching Step 1** (architecture of prompts + registry).
 
 ### What exists in the repo now
 
 | Piece | Path | Notes |
 |-------|------|--------|
-| Domain (Pydantic) | `src/crypto_intel/domain/models.py` | `cryptocurrency`, `period`, `Fact`, `DecisionCard`, `ResearchReport`, `Critique` |
-| Domain exports | `src/crypto_intel/domain/__init__.py` | |
-| Settings | `src/crypto_intel/settings.py` | slices: `postgres`, `redis`, `xai`; `postgres_url`, … |
-| DB session | `src/crypto_intel/db/session.py` | uses `settings.postgres.url`; **`autoflush=False`** |
-| ORM | `src/crypto_intel/db/models.py` | `ResearchRunORM`, `FactORM`, `ReportORM` |
-| Repository | `src/crypto_intel/db/repository.py` | `create_run`, `add_fact`, `save_report`, `get_run`, `set_run_status` |
-| Alembic | `alembic/` + `alembic.ini` | uses `get_settings().postgres.url` |
+| Domain | `src/crypto_intel/domain/` | contracts |
+| Settings | `src/crypto_intel/settings.py` | slices: `postgres`, `redis`, `xai` |
+| DB | `src/crypto_intel/db/` | session, ORM, repository |
 | LLM client | `src/crypto_intel/llm/client.py` | `build_xai_chat_model()` |
-| Legacy demo (optional) | `src/crypto_intel/llm/chat_demo.py` | **legacy**; do not expand; removable later |
-| Unit tests | `tests/test_domain_models.py` | green |
-| Integration tests | `tests/test_repository.py` | green |
-| Compose | `docker-compose.yml` | Postgres **5433→5432**, Redis |
-| Tooling | `pyproject.toml`, `uv.lock` | **uv only**; `langchain-xai` |
+| DecisionCard gen | `src/crypto_intel/llm/decision_card.py` | structured output + retry |
+| Tools | `src/crypto_intel/tools/` | `market.get_market_snapshot` (mock), `executor.ToolExecutor` + `run_tool_loop` |
+| Tests | `tests/` | domain, repository, decision_card, tool_executor — **13 passed** |
 
 ### Important lessons locked (do not re-teach from zero)
 
@@ -75,6 +67,14 @@ Template for each entry:
 ---
 
 ## Entries
+
+## 2026-07-29 — Stage 2 complete — LLM integration layer
+
+- Status: done
+- Implemented: settings slices; `build_xai_chat_model`; `generate_decision_card` + tests; `ToolExecutor` / `run_tool_loop` + mock `get_market_snapshot` + tests
+- Fixed: market arg typo `cryptocurrncy` → `cryptocurrency`; tool-loop test list-mutation assert
+- Verify: `uv run pytest tests/ -v` → 13 passed
+- Next: Stage 3 — prompts, runnables, tools registry
 
 ## 2026-07-29 — Policy lock: production-first (no throwaway demos)
 
