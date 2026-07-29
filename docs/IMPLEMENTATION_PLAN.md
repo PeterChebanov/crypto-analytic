@@ -1,6 +1,7 @@
 # Implementation Plan (stage-by-stage)
 
-**Read first:** `START_HERE.md` (career goal, language policy, no repo code from agent, 4-step teaching protocol, senior+ code bar).  
+**Read first:** `START_HERE.md` (career goal, **production-first policy**, language policy, no repo code from agent, 4-step teaching protocol, senior+ code bar).  
+**Always-on rule:** `.cursor/rules/engineering-bar.mdc` — **re-read before every step**.  
 **Product:** goal B — `PRODUCT.md`  
 **Architecture / priorities:** `ARCHITECTURE.md`  
 **Progress log:** `PROGRESS.md` (update after every teaching step and implementation chunk)
@@ -9,18 +10,20 @@
 
 **Mental model:** orchestrator advances the cycle; LLM proposes actions only where the graph allows; Python runs tools; state persists between steps.
 
+**Production-first (locked):** every stage ships **permanent product modules** (and real tests). No throwaway demos, sandbox CLIs, or “prove the library works” scripts. Theory covers only what we build into the product. Prefer the shortest path to a working product slice.
+
 **How each stage is taught (mandatory order):**
 
 | Teaching step | Agent does | Student does |
 |---------------|------------|--------------|
-| **1. Architecture** | Explains what this stage builds, how it works alone, how it plugs into the full system | Asks until clear; logs notes in `PROGRESS.md` |
-| **2. Technologies & theory** | Lists stack + theory prerequisites + docs to read; web-research if APIs/docs may have changed | Studies / asks; no coding until ready |
-| **3. Sequential implementation** | **One file or command block at a time** in order; explains why; waits for student questions | Rewrites by hand; asks; confirms before next file |
-| **4. Testing / AI Security / AI QA** | Same one-step delivery for tests/security checks | Writes tests; asks until clear |
+| **1. Architecture** | What **product** capability ships; how it fits forever | Asks until clear; logs in `PROGRESS.md` |
+| **2. Technologies & theory** | Stack + theory **for those modules**; web-research if APIs changed | Studies / asks |
+| **3. Sequential implementation** | **One production file** at a time; why it stays; wait for questions | Types by hand; asks; confirms |
+| **4. Testing / AI Security / AI QA** | Tests/security for those modules | Writes tests; asks until clear |
 
-Do not start Teaching Step 3 of a stage until Steps 1–2 are understood (or the student explicitly asks to start coding and accepts learning theory alongside the first files). Do not start the next stage until Step 4 of the current stage is done (or explicitly deferred with a note in `PROGRESS.md`).
+Do not start Teaching Step 3 until Steps 1–2 are understood (or the student explicitly asks to code with theory alongside). Do not start the next stage until Step 4 is done (or explicitly deferred in `PROGRESS.md`).
 
-**Project-wide:** agent never writes app code into the repo; senior+ self-review on every snippet; teach secrets/config proactively. **New dependencies must be announced with explicit `uv add` / `uv add --dev` before implementation code for that step.** Prefer `uv run` so tools use project `.venv`.
+**Project-wide:** agent never writes app code into the repo; senior+ self-review on every snippet; teach secrets/config proactively. **New dependencies must be announced with explicit `uv add` / `uv add --dev` before implementation.** Prefer `uv run`. **Refuse any proposed file that will not be used in production MVP.**
 
 ---
 
@@ -29,13 +32,13 @@ Do not start Teaching Step 3 of a stage until Steps 1–2 are understood (or the
 | Stage | Name | Scope |
 |-------|------|--------|
 | 0 | Repository foundation | Git, project layout, Docker, tooling |
-| 1 | Domain contracts + Postgres | Models, migrations, indexes |
-| 2 | LLM fundamentals in-repo | Call, stream, structured output, manual tool loop |
-| 3 | LangChain building blocks | Prompts, runnables, tools registry |
+| 1 | Domain contracts + Postgres | Models, migrations, indexes, repository |
+| 2 | LLM integration layer | Client, structured output, tool execution primitives (product modules) |
+| 3 | LangChain building blocks | Prompts, runnables, tools registry (used by graph) |
 | 4 | LangGraph orchestrator MVP core | State, nodes, edges, checkpoints, DB persist |
 | 5 | Real collectors + Redis | Market, News, cache, locks |
 | 6 | Quality loop | Critic, LangSmith, evals |
-| 7 | Delivery surface (MVP complete) | FastAPI, scheduler skeleton, README demo |
+| 7 | Delivery surface (MVP complete) | FastAPI, scheduler skeleton, README |
 | **Post-MVP 1** | Hardening + memory + HITL + GitHub | P1 |
 | **Post-MVP 2** | Events + analytics + optional forecast | P2 |
 
@@ -139,44 +142,50 @@ Do in order:
 
 ---
 
-# Stage 2 — LLM fundamentals (in our codebase)
+# Stage 2 — LLM integration layer (product modules)
 
 ### Teaching Step 1 — Architecture
 
-**What we build:** thin LLM adapter + demos of streaming, structured output, and a **manual** tool-call loop (no LangGraph yet).
+**What we build (permanent):** the LLM integration used by Planner / Analysis / Critic later:
 
-**Alone:** scripts prove model I/O contracts.
+- `llm/client.py` — factory from `settings.xai` → chat model (`build_xai_chat_model`)
+- structured-output helper that returns domain types (at minimum `DecisionCard`) with validation + controlled retry
+- tool-call **execution** primitive: model proposes → allowlisted Python executes → observation returned (no free-form agent sandbox)
 
-**In the system:** same adapter used by Planner/Analysis/Critic later; mental model of “LLM proposes → program executes” is established here for interviews.
+**Not in this stage:** disposable chat CLIs, sync/stream “prove it works” scripts, parallel toy entrypoints. Streaming is a transport concern for the **delivery surface** (Stage 7 API) when the product needs it — teach the concept here if useful, implement when the API streams.
+
+**In the system:** graph nodes and chains import these modules; they are not rewritten later as “real code”.
+
+**Already done (keep as-is):** settings slices (`postgres` / `redis` / `xai`), `build_xai_chat_model`, existing chat_demo if present (legacy; do not expand).
 
 ### Teaching Step 2 — Technologies & theory
 
-- Tokens, context window, temperature, streaming
-- Messages vs completions mental model
-- Tool/function calling protocol
-- Structured outputs / JSON schema + validation failures
-- Provider keys, rate limits (high level)
-- LangChain Chat Model wrapper (or official SDK first — prefer LangChain if that is the interview target; confirm current API via web research)
+Only what we ship:
+
+- Messages mental model (system/human/ai/tool) as the protocol graph nodes will use
+- Structured output / JSON schema → Pydantic domain models; parse failures and retry policy
+- Tool/function calling protocol: proposal vs execution; allowlist; arg validation
+- Provider config (xAI), rate limits at high level, secrets handling
+- LangChain chat model API for the chosen provider (confirm current API via web research)
+
+Streaming tokens: conceptual note for later API UX — **no separate demo module**.
 
 ### Teaching Step 3 — Sequential implementation
 
-1. Add LLM deps (`langchain`, provider package, `langchain-openai` or chosen provider).
-2. Config module loads API keys from env; fail fast if missing in non-test.
-3. `llm/client.py`: build chat model from settings.
-4. Script/module: sync invoke with a fixed prompt about a stub cryptocurrency.
-5. Script/module: streaming tokens to stdout.
-6. `structured/decision_card.py`: generate `DecisionCard` from stub evidence; validate with pydantic; retry once on parse failure.
-7. `tools/manual_loop.py`: one tool (`get_mock_price` or live simple price HTTP); loop: model → tool_call → execute → observe → final answer; log each phase clearly.
-8. Commit(s) with clear messages.
-9. Update `PROGRESS.md`.
+1. Confirm deps: `langchain-xai` (and needed LangChain core); `uv add` only if missing.
+2. Confirm `settings` slices + `llm/client.py` (`build_xai_chat_model`) — already present; fix only if broken.
+3. Product module: structured generation of `DecisionCard` from evidence input (stub **data** OK; module path is production: e.g. `llm/structured.py` or `analysis/decision_card.py` — pick one permanent home). Validate with Pydantic; retry once on parse failure.
+4. Product module: tool executor + one allowlisted tool (mock market/news OK if Stage 5 will replace body behind the **same** interface). Loop: bind tools → invoke → execute tool_calls → append ToolMessages → final answer. This executor is what graph/tools will call.
+5. Unit/integration tests for structured parse + tool executor (mock LLM where possible).
+6. Commit(s); update `PROGRESS.md`.
 
-**Done when:** three demos work; logs show proposal → execute → answer; no secrets in repo.
+**Done when:** structured `DecisionCard` path and tool executor are importable product APIs with tests; no new throwaway scripts.
 
 ### Teaching Step 4 — Testing / AI Security / AI QA
 
-- **Tests:** mock the LLM where possible; test pydantic parse failures; test tool executor with fake tool.
-- **Security:** never log full API keys; redact secrets in error traces; sandbox tool allowlist (only registered tools).
-- **AI QA:** assert structured output enum membership; assert tool args schema validation before execution (prevents prompt-injection-driven crazy tool args at basic level).
+- **Tests:** pydantic parse failures; tool executor rejects unknown tools / bad args; happy path with mocked model.
+- **Security:** never log API keys; tool allowlist only; validate tool args before execute.
+- **AI QA:** structured output enum membership (`Stance`); citation-critical fields remain domain concerns for Critic later.
 
 ---
 
@@ -184,9 +193,9 @@ Do in order:
 
 ### Teaching Step 1 — Architecture
 
-**What we build:** reusable prompt templates + runnable chains + a **tools registry** shared by future graph nodes.
+**What we build:** reusable prompt templates + runnables + a **tools registry** that Stage 4 nodes will call. Permanent package layout under `prompts/`, `tools/`, etc.
 
-**Alone:** `plan_chain` / `analysis_chain` run on stubs without a graph.
+**Alone:** chains/registry are callable from tests (and later from nodes) — **not** a separate demo app.
 
 **In the system:** nodes become thin wrappers over these runnables; interview focus: LCEL/runnables, tool descriptions as contracts.
 
@@ -200,22 +209,21 @@ Do in order:
 
 ### Teaching Step 3 — Sequential implementation
 
-1. `prompts/` for planner and analysis (English prompts).
-2. Build runnables returning structured types where applicable.
-3. Implement tools: `fetch_news`, `fetch_market` — **mocks first** with identical signatures to future real tools.
-4. `tools/registry.py`: name → callable + JSON schema/description for the model.
-5. Wire a small “bind tools + one-shot” demo using registry.
-6. Unit tests for registry lookup and mock tools.
-7. Commit: `feat: add langchain prompts runnables and tool registry`.
-8. Update `PROGRESS.md`.
+1. `prompts/` for planner and analysis (English prompts) — production prompts.
+2. Build runnables returning structured types where applicable (reuse Stage 2 structured helpers).
+3. Implement tools: `fetch_news`, `fetch_market` — **mocks first** with **identical signatures** to Stage 5 real tools (same module path; swap implementation later).
+4. `tools/registry.py`: name → callable + schema/description; wire to Stage 2 executor pattern.
+5. Unit tests for registry lookup and mock tools (no demo CLI).
+6. Commit: `feat: add langchain prompts runnables and tool registry`.
+7. Update `PROGRESS.md`.
 
-**Done when:** runnable pipeline tests pass; registry is the single place to add tools.
+**Done when:** runnable pipeline tests pass; registry is the single place to add tools; no throwaway entrypoints.
 
 ### Teaching Step 4 — Testing / AI Security / AI QA
 
 - **Tests:** prompt variable rendering; mock tool outputs; registry unknown-tool error.
 - **Security:** tool descriptions must not instruct the model to exfiltrate env secrets; deny dangerous tools (shell, arbitrary file write) by design.
-- **AI QA:** snapshot/golden strings optional; prefer schema tests over brittle full-text LLM asserts.
+- **AI QA:** prefer schema tests over brittle full-text LLM asserts.
 
 ---
 
@@ -290,7 +298,7 @@ Do in order:
 4. Swap mocks in graph for real tools behind settings flag (`USE_MOCK_TOOLS=false`).
 5. Implement lock around run start; second concurrent start fails or no-ops cleanly.
 6. Error handling: classify retryable vs fatal; write errors into state.
-7. Manual E2E run on one cryptocurrency (e.g. BTC or ETH).
+7. Manual E2E run on one cryptocurrency (e.g. BTC or ETH) via the **product entrypoint available at that time** (graph CLI/API — not a throwaway LLM demo).
 8. Commits; update `PROGRESS.md`.
 
 **Done when:** cache hit on second market call; lock works; evidence in DB has real URLs/fields; graph still completes.
@@ -364,12 +372,12 @@ Do in order:
 2. Map HTTP errors cleanly (404, 409 lock conflict, 500 with correlation id).
 3. Wire settings + lifespan (DB pool).
 4. Add scheduler module reading watchlist from config/YAML; document enabling it.
-5. README: architecture blurb, bootstrap, curl demo, example report screenshot/file, product goal B disclaimer.
+5. README: architecture blurb, bootstrap, curl against the **real API**, example report, product goal B disclaimer.
 6. Full MVP checklist pass (below).
-7. Tag or commit: `feat: mvp api and demo path`.
+7. Tag or commit: `feat: mvp api and scheduler`.
 8. Update `PROGRESS.md` — mark MVP complete.
 
-**Done when:** stranger can follow README and get a report in <30 minutes; MVP checklist all checked.
+**Done when:** stranger can follow README and get a report in <30 minutes via product API; MVP checklist all checked.
 
 ### Teaching Step 4 — Testing / AI Security / AI QA
 

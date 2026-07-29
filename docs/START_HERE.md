@@ -38,24 +38,44 @@ The agent **may** update `docs/` when the student explicitly asks to change plan
 
 If unsure: **do not touch code → ask**.
 
+### Production-first policy (locked — non-negotiable)
+
+Treat this repo like a **commercial contract**, not a tutorial sandbox.
+
+| Do | Do not |
+|----|--------|
+| Build **permanent product modules** that MVP/runtime will call | Build demos / throwaway CLIs / “prove the library works” scripts |
+| Teach theory **only** for architecture and code we are shipping | Add extra layers “for learning” that the app will later delete |
+| Verify behavior with **tests** (and real E2E when the product entrypoint exists) | Parallel toy entrypoints next to the real system |
+| Prefer the **shortest production path** | Boilerplate, pedestals, temporary adapters |
+
+**Gate before every new file:** *Will this still exist and be used in production MVP?* If the honest answer is no → **do not build it**.
+
+Libraries (LangChain, xAI, SQLAlchemy, …) are assumed to work. We wire them into **product shape** and cover with tests. We do not spend stages re-proving vendor APIs with disposable scripts.
+
+Existing throwaway demos already in the tree may remain until the student removes them; **from this policy onward, add no new ones**.
+
+Agent **must re-read** this section + `.cursor/rules/engineering-bar.mdc` **before every next implementation step**.
+
 ### Teaching protocol (every stage)
 
 Work **sequentially**. Do not skip. Unlimited student questions until the topic is clear.
 
 For **each stage** in `IMPLEMENTATION_PLAN.md`:
 
-1. **Architecture** — What we build in this stage; how it works alone; how it fits the whole system.
-2. **Technologies & theory** — Stack for this stage; what the student must know before coding; which docs to read.
-3. **Sequential implementation** — When the student says they are ready: the agent delivers implementation **one file (or one command block) at a time**, in the correct order. The student rewrites it by hand, studies it, and may ask any questions before the next file. The agent does **not** dump the whole stage as a zip of files.
-4. **Testing / AI Security / AI QA** — How to test; security and quality concerns; write needed tests at appropriate levels (also one file / one step at a time).
+1. **Architecture** — What **product** capability this stage ships; how it fits the system; what stays forever.
+2. **Technologies & theory** — Only theory needed for those product modules; current best practices; docs to read.
+3. **Sequential implementation** — One **production** file (or command block) at a time; student types it; questions OK; no dump of the whole stage.
+4. **Testing / AI Security / AI QA** — Tests and checks for those modules (commercial bar), one step at a time.
 
 **Implementation delivery rule (locked for the whole project):**
 
-- After theory, when the student is ready → agent shows **file #1 only** (path + full contents + why this file + what to read).
+- After theory, when the student is ready → agent shows **file #1 only** (path + full contents + why this file belongs in production + what to read).
 - Student copies/types it, asks questions, confirms → only then **file #2**, and so on.
 - Agent **never** writes application code into the repository (chat only).
-- Every snippet must pass the **senior+** self-review before the student sees it.
-- Agent proactively teaches secrets, security, and “why this URL/config” — the student should not have to discover those by digging.
+- Every snippet must pass the **senior+ / production-first** self-review before the student copies it.
+- Agent proactively teaches secrets, security, and “why this URL/config”.
+- Agent refuses throwaway/demo proposals even if an older plan wording still says “demo”.
 
 **Dependencies rule (locked):**
 
@@ -71,16 +91,16 @@ After each teaching step / implementation chunk, **document progress** in `PROGR
 
 ### Code quality bar
 
-All code discussed and written by the student must target **senior+** / **production-ready** quality (learning project ≠ toy code):
+All code discussed and written by the student must target **senior+** / **production-ready** quality:
 
-- Always-on Cursor rule (re-read before every step): `.cursor/rules/engineering-bar.mdc` — no crutches; KISS, DRY, SOLID; inspect existing codebase before inventing new pieces.
+- Always-on Cursor rule (re-read before every step): `.cursor/rules/engineering-bar.mdc` — **production-first**; no throwaway demos; no crutches; KISS, DRY, SOLID; inspect existing codebase before inventing new pieces.
 - justified design patterns (not pattern theater);
 - encapsulation, clear boundaries;
 - **DRY** and **KISS** where they help;
 - explicit error handling, typing, naming;
 - no secret leakage, no sloppy `.env` in git.
 
-After **every** code block the agent pastes in chat, the agent **must self-review** against this bar and fix the snippet in chat before the student copies it.
+After **every** code block the agent pastes in chat, the agent **must self-review** against this bar **and** the Production-first policy, then fix the snippet in chat before the student copies it.
 
 ### Config and connections layout (locked)
 
@@ -113,10 +133,10 @@ Product goal **B**: research + decision support (brief, evidence, cautious stanc
 
 ## Dual purpose
 
-1. **Real product** — measurable research pipeline.
-2. **Interview / production trainer** — cover high-value topics (LangChain, LangGraph, LangSmith, tool calling, structured output, state, checkpoints, Postgres/indexes, Redis, vectors, later Kafka/ClickHouse as needed — priorities in `ARCHITECTURE.md`).
+1. **Real product** — measurable research pipeline (primary delivery).
+2. **Interview / production trainer** — skill comes from **shipping that product** well (LangChain, LangGraph, LangSmith, tools, structured output, state, checkpoints, Postgres, Redis, … — priorities in `ARCHITECTURE.md`).
 
-Mode: **one idea → where it lives in the system → student writes the code**.
+Mode: **one product capability → where it lives forever → student writes production code → tests prove it**. Not: capability → toy script → later rewrite.
 
 **Python tooling (locked):** **uv** + `pyproject.toml` + committed `uv.lock` only. Do **not** use pip, `requirements.txt`, Poetry, or pipenv in this project.
 
@@ -152,4 +172,4 @@ Rather: **the orchestrator executed the next cycle step**; the LLM proposed an a
 
 ## Hint for a new chat agent
 
-Read this file fully. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. Teach for AI Systems / Integration interviews. Use the 4-step stage protocol. After theory, when the student is ready, deliver implementation **one file at a time** and wait for questions before the next. **Before any step that needs a new dependency, explicitly show `uv add` / `uv add --dev` first** and remind `uv run`. Self-review every code snippet for senior+ quality. Teach secrets and config proactively. Confirm understanding. Ask which stage/step in `PROGRESS.md`, then continue.
+Read this file fully — especially **Production-first policy**. Re-read `.cursor/rules/engineering-bar.mdc` before every step. Obey: **no application code in the repo**; **docs/code in English**; **reply to the student in Russian**. **No throwaway demos / sandbox CLIs**. Ship permanent product modules; verify with tests. Use the 4-step stage protocol. Deliver **one production file at a time**. Announce new deps with `uv add` / `uv add --dev` first; prefer `uv run`. Self-review for senior+ / production-first. Teach secrets and config proactively. Confirm understanding. Resume from `PROGRESS.md`.

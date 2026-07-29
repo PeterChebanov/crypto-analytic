@@ -1,17 +1,28 @@
 ---
-description: Production engineering bar — layered config, integration factories, KISS/DRY/SOLID
+description: Production-first engineering bar — no throwaway code; re-read before every step
 alwaysApply: true
 ---
 
-# Engineering bar (re-read before every step)
+# Engineering bar (re-read before EVERY step)
 
-Learning project, but **code must be production-ready**. Teaching in chat; codebase is not a sandbox.
+Learning project = **commercial-grade codebase**. Teach architecture and skill; never build sandboxes to later delete.
 
-## Before any new snippet or step
+## Before any new snippet or step (mandatory)
 
-1. **Re-read this rule** and `docs/START_HERE.md`.
-2. **Inspect the codebase** — reuse existing settings slices, factories, domain, repository.
-3. **Self-review** every snippet before the student copies it.
+1. **Re-read this entire rule** + `docs/START_HERE.md` (especially Production-first policy).
+2. **Re-read current Stage** in `docs/IMPLEMENTATION_PLAN.md`.
+3. **Inspect the codebase** — reuse settings slices, factories, domain, repository.
+4. Ask: **Will this file still exist and be called in production MVP?** If no → do not propose it.
+5. **Self-review** every snippet against this bar before the student copies it.
+
+## Production-first (locked — non-negotiable)
+
+- **Ship product modules only** — every new file is a permanent part of the system (or a real `tests/` for that module).
+- **Forbidden:** throwaway demos, sandbox CLIs, “prove the library works” scripts, temporary adapters we plan to delete, parallel toy entrypoints.
+- **Libraries work** — we do not re-prove LangChain/xAI with disposable scripts. We wire them into product shape and cover with **tests**.
+- **Theory only for what we build** — teach production architecture, contracts, failure modes, security; not tutorial side quests.
+- **Straight path** — prefer the shortest route to a working product slice; no extra layers “for learning” that the app will not use.
+- Existing throwaway demos already in the repo may stay until the student chooses to remove them; **do not add more**.
 
 ## Architecture: config and connections (locked)
 
@@ -20,27 +31,26 @@ Learning project, but **code must be production-ready**. Teaching in chat; codeb
 | Layer | Responsibility | Example path |
 |-------|----------------|--------------|
 | **Settings root** | Load `.env` once; group fields by integration | `settings.py` → `get_settings()` |
-| **Config slices** | Typed view per integration (only fields that integration needs) | `settings.xai`, `settings.postgres`, `settings.redis` |
+| **Config slices** | Typed view per integration | `settings.xai`, `settings.postgres`, `settings.redis` |
 | **Integration factory** | Build client/engine from its slice only | `db/session.py`, `llm/client.py`, `redis/client.py` |
 | **Business logic** | Depends on **clients/protocols**, never raw `Settings` | `repository.py`, graph nodes |
 
 Rules:
 
-- **Not a junk drawer in code** — flat `Settings` for env load is OK; pass **slices** or **clients** downward, not the whole object everywhere.
-- **Not one mega “database factory”** for Postgres + Redis + Kafka — different protocols, different modules, different factories.
-- **One factory per integration**, obvious name: `get_engine()` / `session_scope()`, `get_redis()`, `build_xai_chat_model()`.
-- Add a new backend (Anthropic, Kafka) → new **settings slice** + new **module** + new **factory**; do not bolt onto unrelated files.
-- **YAGNI** — no Kafka module until the stage needs it; but **folder and pattern** are decided up front.
+- Pass **slices** or **clients** downward — not the whole `Settings` object everywhere.
+- **Not one mega factory** for Postgres + Redis + Kafka — different modules, different factories.
+- One factory per integration: `get_engine()` / `session_scope()`, `get_redis()`, `build_xai_chat_model()`.
+- New backend → new settings slice + new module + new factory.
+- **YAGNI** on unused backends; **not YAGNI** on clear boundaries for what we do build.
 
 ## Code bar (non-negotiable)
 
 - **Code first, tests second** — correct production shape; adapt tests/env to code.
 - **No crutches** — no `assert`/casts/`# type: ignore` for types; no duplicate validation; no optional+`require_*` dances.
-- **KISS** — one clear path: `get_settings()` loads required config or fails at startup.
-- **DRY** — validation and env mapping live in settings once.
-- **SOLID** — factories wire; they do not re-validate; business code does not read env vars directly.
+- **KISS / DRY / SOLID** — factories wire; they do not re-validate; business code does not read env vars.
 - **Secrets** — `SecretStr`; never log secret values.
+- Match project naming (`cryptocurrency`, `period`, `Fact`, …).
 
 ## Fail the step if
 
-Duplicate checks, type lies, code bent around tests, passing full `Settings` into layers that only need one slice, or a new integration without its own module/factory.
+Throwaway/demo/sandbox code; duplicate checks; type lies; code bent around tests; full `Settings` where a slice/client suffices; new integration without its own module/factory; theory detours that do not land in product code or tests.

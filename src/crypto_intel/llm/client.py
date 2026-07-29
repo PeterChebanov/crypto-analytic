@@ -1,12 +1,10 @@
 """Thin LLM client factory (xAI Grok via LangChain)."""
 from __future__ import annotations
 from langchain_xai import ChatXAI
-from openai.resources.chat.chat import Chat
-from crypto_intel.settings import Settings, get_settings
+from crypto_intel.settings import get_settings
 
 
-
-def build_xai_chat_model(settings: Settings | None = None) -> ChatXAI:
+def build_xai_chat_model() -> ChatXAI:
     xai = get_settings().xai
     return ChatXAI(
         model=xai.model,

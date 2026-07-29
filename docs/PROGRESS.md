@@ -22,19 +22,21 @@ Template for each entry:
 
 ## Current position
 
-- **Stage:** 2 — LLM fundamentals in-repo
-- **Teaching step:** Step 3 — file #1 `settings.py` in chat (xAI / `grok-4.5`); awaiting student apply + confirm
+- **Stage:** 2 — LLM integration layer (production modules)
+- **Policy locked (2026-07-29):** production-first — no new throwaway demos/sandbox CLIs; permanent product modules + tests only. Existing `chat_demo` (if present) is legacy; do not expand.
+- **Done in Stage 2 so far:** settings slices (`postgres`/`redis`/`xai`), `llm/client.py` (`build_xai_chat_model`), layered config pattern
+- **Next:** Stage 2 remaining — structured `DecisionCard` product module + tool executor (permanent); then tests
 - **Provider:** xAI Grok — `XAI_API_KEY`, `XAI_BASE_URL`, model `grok-4.5`
 - **MVP:** not complete (Stages 2–7 remain)
 - **Post-MVP 1 / 2:** locked until MVP DoD
 
 ### Resume checklist (new chat)
 
-1. Read `docs/START_HERE.md` (teacher rules, uv-only, one-file-at-a-time, deps rule).
-2. Read this file + skim `PRODUCT.md` / `ARCHITECTURE.md` if needed.
-3. Confirm Stage 1 green: `uv run pytest tests/ -v`
-4. Stage 2 next after settings: `llm/client.py` (`ChatXAI`)
-5. Provider locked: xAI Grok `grok-4.5` via `langchain-xai`
+1. Read `docs/START_HERE.md` — especially **Production-first policy**.
+2. Re-read `.cursor/rules/engineering-bar.mdc` before proposing any file.
+3. Read this file + `IMPLEMENTATION_PLAN.md` Stage 2 (revised).
+4. Confirm Stage 1 green: `uv run pytest tests/ -v`
+5. Continue Stage 2 with **product** modules only (structured DecisionCard → tool executor → tests). No chat demos.
 
 ### What exists in the repo now
 
@@ -42,35 +44,45 @@ Template for each entry:
 |-------|------|--------|
 | Domain (Pydantic) | `src/crypto_intel/domain/models.py` | `cryptocurrency`, `period`, `Fact`, `DecisionCard`, `ResearchReport`, `Critique` |
 | Domain exports | `src/crypto_intel/domain/__init__.py` | |
-| Settings | `src/crypto_intel/settings.py` | `get_settings()`, `.env`, `SecretStr` for API keys |
-| DB session | `src/crypto_intel/db/session.py` | Engine + factory + `session_scope()`, **`autoflush=False`** |
-| ORM | `src/crypto_intel/db/models.py` | `ResearchRunORM`, `FactORM`, `ReportORM`; table `facts` |
+| Settings | `src/crypto_intel/settings.py` | slices: `postgres`, `redis`, `xai`; `postgres_url`, … |
+| DB session | `src/crypto_intel/db/session.py` | uses `settings.postgres.url`; **`autoflush=False`** |
+| ORM | `src/crypto_intel/db/models.py` | `ResearchRunORM`, `FactORM`, `ReportORM` |
 | Repository | `src/crypto_intel/db/repository.py` | `create_run`, `add_fact`, `save_report`, `get_run`, `set_run_status` |
-| Alembic | `alembic/` + `alembic.ini` | Migration applied: `3ec3af084cdb` (research_runs, facts, reports) |
-| Unit tests | `tests/test_domain_models.py` | 5 tests, green |
-| Integration tests | `tests/test_repository.py` | roundtrip via real Postgres; green |
-| Compose | `docker-compose.yml` | Postgres host port **5433→5432**, Redis; creds via `${POSTGRES_*}` |
-| Tooling | `pyproject.toml`, `uv.lock` | **uv only**; pytest as **dev** dependency |
+| Alembic | `alembic/` + `alembic.ini` | uses `get_settings().postgres.url` |
+| LLM client | `src/crypto_intel/llm/client.py` | `build_xai_chat_model()` |
+| Legacy demo (optional) | `src/crypto_intel/llm/chat_demo.py` | **legacy**; do not expand; removable later |
+| Unit tests | `tests/test_domain_models.py` | green |
+| Integration tests | `tests/test_repository.py` | green |
+| Compose | `docker-compose.yml` | Postgres **5433→5432**, Redis |
+| Tooling | `pyproject.toml`, `uv.lock` | **uv only**; `langchain-xai` |
 
 ### Important lessons locked (do not re-teach from zero)
 
+- **Production-first:** no throwaway demos; ship permanent modules; verify with tests; re-read rules before every step.
 - **Engineering bar:** `.cursor/rules/engineering-bar.mdc` — layered settings slices + per-integration factories; code first; no crutches.
-- **Config flow:** `.env` → `get_settings()` → slices (`xai`, `postgres`, `redis`, …) → factories (`db/session`, `llm/client`, `redis/client` later) → business code uses clients only.
+- **Config flow:** `.env` → `get_settings()` → slices → factories → business code uses clients only.
 - Layers: domain → settings (root + slices) → integration factories → repository / graph nodes.
-- `session_scope`: `yield` pauses for `with` body; success → `commit()` (includes flush) → `close()`.
-- `run_id = run.id` does **not** end the `with` block; leaving the indented `with` body does.
-- With `autoflush=False`, do not `session.get` / SELECT for a row you just `add`ed in the **same** session without `flush` or without keeping the object reference. Prefer mutate the in-memory object (`run.status = ...`) over mid-session `get`.
-- Always `uv run pytest` / `uv run python` so interpreter path contains `.venv` (not bare pyenv `pytest`).
-- Pydantic field names must match exactly (`decision`, not `descision`; `model_dump`, not `model.dump`).
-- LLM provider: xAI Grok (`XAI_API_KEY`, `XAI_BASE_URL`, model `grok-4.5`); thin client via `build_chat_model`; validation once in settings → typed config (no assert crutches in client).
+- `session_scope`: `yield` pauses for `with` body; success → `commit()` → `close()`.
+- With `autoflush=False`, prefer mutate in-memory ORM objects over mid-session `get` without flush.
+- Always `uv run …` (project `.venv`).
+- LLM provider: xAI Grok (`XAI_*`, `llm_model` / `grok-4.5`); factory `build_xai_chat_model()`.
 
 ### Naming locked
 
 - `cryptocurrency` / `period` / `Fact` (not asset / horizon / EvidenceItem)
+- Root settings: `postgres_url` (not generic `database_url`)
 
 ---
 
 ## Entries
+
+## 2026-07-29 — Policy lock: production-first (no throwaway demos)
+
+- Status: done (docs/rules)
+- Changed: `START_HERE.md`, `IMPLEMENTATION_PLAN.md` (Stage 2–3+), `.cursor/rules/engineering-bar.mdc`, this file
+- Rule: build only permanent product modules + tests; no sandbox CLIs / prove-library scripts; theory only for shipped code
+- Keep existing implemented code as-is (including legacy `chat_demo` until student removes it)
+- Next: Stage 2 product path — structured `DecisionCard` module, then tool executor, then tests
 
 ## 2026-07-26 — Stage 2 / file #1 done — settings green; delivering client
 
