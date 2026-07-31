@@ -80,7 +80,24 @@ class DecisionCard(BaseModel):
         default_factory=list,
         description="If these things happen, the stance may no longer be valid.",
     )
+    
+class AnalysisDraft(BaseModel):
+    """Textuatl analysis without a DecisionCard (assembled into ResearchReport later)"""
 
+    brief: str = Field(..., min_length=1, description="Short summary in plain language")
+    gaps: list[str] = Field(
+        default_factory=list,
+        description="What we still do not know",
+    )
+    risks_and_catalysts: list[str] = Field(
+        default_factory=list,
+        description="What could help or hurt the cryptocurrency"
+    )
+
+    watchlist: list[str] = Field(
+        default_factory=list,
+        description="What to monitor next" 
+    )
 
 class ResearchReport(BaseModel):
     """The final document the user reads after a research run."""

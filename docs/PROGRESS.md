@@ -22,31 +22,34 @@ Template for each entry:
 
 ## Current position
 
-- **Stage:** 2 — LLM integration layer → **DONE**
-- **Next stage:** 3 — LangChain building blocks (prompts, runnables, tools registry)
+- **Stage:** 3 — LangChain building blocks → **DONE**
+- **Next stage:** 4 — LangGraph orchestrator MVP core
 - **Provider:** xAI Grok — `XAI_API_KEY`, `XAI_BASE_URL`, model `grok-4.5`
-- **MVP:** not complete (Stages 3–7 remain)
+- **MVP:** not complete (Stages 4–7 remain)
 - **Post-MVP 1 / 2:** locked until MVP DoD
 - **Policy:** production-first (no throwaway demos)
+- **Docs ownership:** agent updates `docs/PROGRESS.md` after each teaching step / chunk (student asked 2026-07-30)
 
 ### Resume checklist (new chat)
 
 1. Read `docs/START_HERE.md` — Production-first policy.
 2. Re-read `.cursor/rules/engineering-bar.mdc`.
-3. Confirm green: `uv run pytest tests/ -v` (13 passed as of Stage 2 close).
-4. Start **Stage 3 / Teaching Step 1** (architecture of prompts + registry).
+3. Confirm green: `uv run pytest tests/ -v` (**25 passed** as of Stage 3 close).
+4. Start **Stage 4 / Teaching Step 1** (LangGraph architecture: state, nodes, edges, checkpoints).
 
 ### What exists in the repo now
 
 | Piece | Path | Notes |
 |-------|------|--------|
-| Domain | `src/crypto_intel/domain/` | contracts |
+| Domain | `src/crypto_intel/domain/` | contracts + `AnalysisDraft` |
 | Settings | `src/crypto_intel/settings.py` | slices: `postgres`, `redis`, `xai` |
 | DB | `src/crypto_intel/db/` | session, ORM, repository |
 | LLM client | `src/crypto_intel/llm/client.py` | `build_xai_chat_model()` |
 | DecisionCard gen | `src/crypto_intel/llm/decision_card.py` | structured output + retry |
-| Tools | `src/crypto_intel/tools/` | `market.get_market_snapshot` (mock), `executor.ToolExecutor` + `run_tool_loop` |
-| Tests | `tests/` | domain, repository, decision_card, tool_executor — **13 passed** |
+| Prompts | `src/crypto_intel/prompts/` | planner + analysis templates |
+| Tools | `src/crypto_intel/tools/` | market + news (mocks), registry, `ToolExecutor` / `run_tool_loop` |
+| Chains | `src/crypto_intel/chains/` | `plan_collection`, `analyze_evidence` |
+| Tests | `tests/` | domain, repository, decision_card, tool_executor, registry, prompts, chains — **25 passed** |
 
 ### Important lessons locked (do not re-teach from zero)
 
@@ -58,6 +61,9 @@ Template for each entry:
 - With `autoflush=False`, prefer mutate in-memory ORM objects over mid-session `get` without flush.
 - Always `uv run …` (project `.venv`).
 - LLM provider: xAI Grok (`XAI_*`, `llm_model` / `grok-4.5`); factory `build_xai_chat_model()`.
+- **Registry** is the single allowlist + `tools_description` source for planner; Stage 5 swaps tool bodies behind the same names.
+- **AnalysisDraft** + `DecisionCard` stay separate; `ResearchReport` assembles them later in the graph.
+- Field naming must match domain contracts (`gaps`, not typos like `agps`).
 
 ### Naming locked
 
@@ -67,6 +73,18 @@ Template for each entry:
 ---
 
 ## Entries
+
+## 2026-07-30 — Stage 3 complete — LangChain building blocks
+
+- Status: done
+- Understood architecture: yes
+- Understood theory: yes (prompt templates, LCEL, tools registry)
+- Implemented: `prompts/planner.py`, `prompts/analysis.py`; `tools/news.py`, `tools/registry.py`; `chains/planner.py`, `chains/analysis.py`; domain `AnalysisDraft`
+- Tests / security / AI QA: `test_registry`, `test_prompts`, `test_chains`; allowlist-only collectors; no live LLM in unit tests
+- Fixed: `AnalysisDraft.agps` → `gaps`; `normalize_question` blank → `"(no specific focus)"`
+- Verify with: `uv run pytest tests/ -v` → **25 passed**
+- Next: Stage 4 / Teaching Step 1 — LangGraph orchestrator architecture
+- Note: student asked agent to own `PROGRESS.md` updates going forward
 
 ## 2026-07-29 — Stage 2 complete — LLM integration layer
 
