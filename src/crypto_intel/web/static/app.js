@@ -2,13 +2,23 @@ const LAUNCHER = "http://127.0.0.1:7911";
 const API = "";
 
 const apiBadge = document.getElementById("apiBadge");
-const launcherBadge = document.getElementById("launcherBadge");
 const startStackBtn = document.getElementById("startStackBtn");
+const logsBtn = document.getElementById("logsBtn");
+const logsCloseBtn = document.getElementById("logsCloseBtn");
+const logsWindow = document.getElementById("logsWindow");
+const sessionLogsView = document.getElementById("sessionLogsView");
+const depsError = document.getElementById("depsError");
+const depsWarn = document.getElementById("depsWarn");
 const form = document.getElementById("researchForm");
 const runBtn = document.getElementById("runBtn");
 const runStatus = document.getElementById("runStatus");
 const runError = document.getElementById("runError");
 const reportPanel = document.getElementById("reportPanel");
+const loadingPanel = document.getElementById("loadingPanel");
+const loadingTitle = document.getElementById("loadingTitle");
+const loadingDetail = document.getElementById("loadingDetail");
+const loadLampGreen = document.getElementById("loadLampGreen");
+const loadLampRed = document.getElementById("loadLampRed");
 const priceGatePanel = document.getElementById("priceGatePanel");
 const priceGateMessage = document.getElementById("priceGateMessage");
 const priceQuotes = document.getElementById("priceQuotes");
@@ -16,35 +26,189 @@ const priceYesBtn = document.getElementById("priceYesBtn");
 const priceNoBtn = document.getElementById("priceNoBtn");
 
 let activeRunId = null;
+const sessionLogs = [];
+const SESSION_STARTED = Date.now();
 
-function setBadge(el, ok, label) {
-  el.classList.toggle("ok", ok === true);
-  el.classList.toggle("bad", ok === false);
-  el.innerHTML = `<span class="dot"></span> ${label}`;
+function pushLog(level, message, detail) {
+  const entry = {
+    ts: new Date().toISOString(),
+    level,
+    message: String(message || ""),
+    detail: detail == null ? null : String(detail),
+  };
+  sessionLogs.push(entry);
+  if (logsWindow && !logsWindow.hidden) {
+    renderSessionLogs();
+  }
+}
+
+function renderSessionLogs() {
+  if (!sessionLogs.length) {
+    sessionLogsView.innerHTML = `<div class="log-line info">No logs yet (session started ${new Date(SESSION_STARTED).toISOString()}).</div>`;
+    return;
+  }
+  sessionLogsView.innerHTML = sessionLogs
+    .map((e) => {
+      const extra = e.detail ? `\n${e.detail}` : "";
+      return `<div class="log-line ${escapeHtml(e.level)}">[${escapeHtml(e.ts)}] ${escapeHtml(e.level.toUpperCase())} ${escapeHtml(e.message)}${escapeHtml(extra)}</div>`;
+    })
+    .join("");
+  sessionLogsView.scrollTop = sessionLogsView.scrollHeight;
+}
+
+function setApiBadge(state, label) {
+  apiBadge.classList.remove("ok", "bad", "warn", "blink");
+  if (state === "ok") apiBadge.classList.add("ok");
+  if (state === "bad") apiBadge.classList.add("bad");
+  if (state === "warn") apiBadge.classList.add("warn");
+  if (state === "blink") apiBadge.classList.add("blink");
+  apiBadge.innerHTML = `<span class="dot"></span> ${label}`;
+}
+
+function setLoadingLamps(mode) {
+  loadLampGreen.classList.remove("on", "blink");
+  loadLampRed.classList.remove("on", "blink");
+  if (mode === "loading") {
+    loadLampGreen.classList.add("blink");
+    loadLampRed.classList.add("blink");
+  } else if (mode === "ok") {
+    loadLampGreen.classList.add("on");
+  } else if (mode === "bad") {
+    loadLampRed.classList.add("on");
+  }
+}
+
+function showLoading(detail) {
+  loadingPanel.hidden = false;
+  loadingTitle.textContent = "Research in progress";
+  loadingDetail.textContent = detail || "Working…";
+  setLoadingLamps("loading");
+}
+
+function finishLoading(ok, detail) {
+  loadingPanel.hidden = false;
+  loadingTitle.textContent = ok ? "Research finished" : "Research failed";
+  loadingDetail.textContent = detail || (ok ? "Done" : "Failed");
+  setLoadingLamps(ok ? "ok" : "bad");
+}
+
+function hideLoadingSoon() {
+  window.setTimeout(() => {
+    if (!runBtn.disabled) loadingPanel.hidden = true;
+  }, 1200);
+}
+
+function fillStatusBanner(el, label, message, recommendation) {
+  el.hidden = false;
+  el.innerHTML =
+    `<div class="status-banner-label">${escapeHtml(label)}</div>` +
+    `<div class="status-banner-body">${escapeHtml(message)}</div>` +
+    `<div class="status-banner-action">${escapeHtml(recommendation)}</div>`;
+}
+
+function recommendationForDeps(body) {
+  const failed = (body.checks || []).filter((c) => !c.ok).map((c) => c.name);
+  const tips = [];
+  if (failed.includes("cryptocompare_news")) {
+    tips.push(
+      "News feed is unauthorized (401). Research can continue with mock/limited news; add a valid CryptoCompare key in .env when you need live headlines, or ignore this for price-only runs.",
+    );
+  }
+  if (failed.includes("binance_futures")) {
+    tips.push(
+      "Futures data is unavailable. Spot research still works; forecast derivatives notes will show N/A until Binance Futures is reachable.",
+    );
+  }
+  const hard = ["binance_spot", "kraken_spot", "coingecko", "binance_klines"];
+  if (failed.some((name) => hard.includes(name))) {
+    tips.push(
+      "Required price venue failed. Check internet/VPN, retry in a minute, or restart the local stack (Start.command / scripts/start.sh). Do not trust forecast levels until spot probes are green.",
+    );
+  }
+  if (!tips.length) {
+    tips.push("Retry the page refresh. If it persists, open Logs and restart the local stack.");
+  }
+  return `What to do: ${tips.join(" ")}`;
 }
 
 async function refreshHealth() {
+  depsError.hidden = true;
+  depsWarn.hidden = true;
+  depsError.innerHTML = "";
+  depsWarn.innerHTML = "";
+  setApiBadge("blink", "API: checking…");
+
+  let localOk = false;
   try {
     const res = await fetch(`${API}/health`, { cache: "no-store" });
-    setBadge(apiBadge, res.ok, res.ok ? "API: online" : "API: error");
-  } catch {
-    setBadge(apiBadge, false, "API: offline");
+    localOk = res.ok;
+    if (!localOk) {
+      pushLog("error", "Local API /health failed", `status=${res.status}`);
+    }
+  } catch (err) {
+    localOk = false;
+    pushLog("error", "Local API offline", err.message || String(err));
+  }
+
+  if (!localOk) {
+    setApiBadge("bad", "API: offline");
+    fillStatusBanner(
+      depsError,
+      "Error",
+      "Local API is offline.",
+      "What to do: keep Docker Desktop running, then click Start local stack (or run Start.command / scripts/start.sh). Refresh this page after the API is up.",
+    );
+    return;
   }
 
   try {
-    const res = await fetch(`${LAUNCHER}/status`, { cache: "no-store" });
-    if (!res.ok) throw new Error("bad status");
-    const data = await res.json();
-    const ok = Boolean(data.launcher);
-    setBadge(
-      launcherBadge,
-      ok,
-      ok
-        ? `Launcher: online${data.docker ? " · Docker OK" : " · Docker down"}`
-        : "Launcher: error",
+    const res = await fetch(`${API}/health/dependencies`, { cache: "no-store" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || `deps ${res.status}`);
+
+    for (const check of body.checks || []) {
+      pushLog(
+        check.ok ? "info" : "error",
+        `Dependency ${check.name}: ${check.ok ? "ok" : "fail"}`,
+        check.detail,
+      );
+    }
+
+    if (!body.ok || body.level === "error") {
+      setApiBadge("bad", "API: degraded");
+      fillStatusBanner(
+        depsError,
+        "Error",
+        body.summary || "One or more required venues failed",
+        recommendationForDeps(body),
+      );
+      pushLog("error", "Dependency probe failed", body.summary);
+      return;
+    }
+
+    if (body.level === "warn") {
+      setApiBadge("ok", "API: online");
+      fillStatusBanner(
+        depsWarn,
+        "Warning",
+        body.summary || "Optional venue warning",
+        recommendationForDeps(body),
+      );
+      pushLog("warn", "Dependency warning", body.summary);
+      return;
+    }
+
+    setApiBadge("ok", "API: online");
+    pushLog("info", "Dependency probe ok", body.summary);
+  } catch (err) {
+    setApiBadge("bad", "API: error");
+    fillStatusBanner(
+      depsError,
+      "Error",
+      String(err.message || err),
+      "What to do: refresh the page. If it continues, restart the API (Start.command / scripts/start.sh) and open Logs for details.",
     );
-  } catch {
-    setBadge(launcherBadge, false, "Launcher: offline (run Start.command)");
+    pushLog("error", "Dependency probe request failed", err.message || String(err));
   }
 }
 
@@ -52,6 +216,7 @@ startStackBtn.addEventListener("click", async () => {
   runError.textContent = "";
   startStackBtn.disabled = true;
   startStackBtn.textContent = "Starting…";
+  pushLog("info", "Start local stack requested");
   try {
     const res = await fetch(`${LAUNCHER}/start`, { method: "POST" });
     const body = await res.json().catch(() => ({}));
@@ -59,15 +224,28 @@ startStackBtn.addEventListener("click", async () => {
       throw new Error(body.detail || `Start failed (${res.status})`);
     }
     runStatus.textContent = body.message || "Stack started";
+    pushLog("info", "Start local stack ok", body.message || "");
     await refreshHealth();
   } catch (err) {
-    runError.textContent =
-      `${err.message}\n\n` +
-      "If launcher is offline: double-click Start.command (or run scripts/start.sh) while Docker Desktop is running.";
+    runError.textContent = String(err.message || err);
+    pushLog("error", "Start local stack failed", err.message || String(err));
   } finally {
     startStackBtn.disabled = false;
     startStackBtn.textContent = "Start local stack";
   }
+});
+
+logsBtn.addEventListener("click", () => {
+  logsWindow.hidden = false;
+  renderSessionLogs();
+});
+
+logsCloseBtn.addEventListener("click", () => {
+  logsWindow.hidden = true;
+});
+
+logsWindow.addEventListener("click", (event) => {
+  if (event.target === logsWindow) logsWindow.hidden = true;
 });
 
 function listHtml(items) {
@@ -208,7 +386,6 @@ function renderReport(payload) {
     return;
   }
   reportPanel.hidden = false;
-  document.querySelector('.tab[data-tab="result"]').click();
 
   const decision = report.decision || {};
   document.getElementById("stance").textContent =
@@ -239,21 +416,14 @@ function renderReport(payload) {
     factsRoot.appendChild(article);
   }
 
-  loadLogs(payload.run_id);
-}
-
-async function loadLogs(runId) {
-  const pre = document.getElementById("logsPre");
-  try {
-    const res = await fetch(`${API}/research/${runId}/logs`);
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.detail || "logs failed");
-    pre.textContent = body.entries.length
-      ? body.entries.map((e) => JSON.stringify(e)).join("\n")
-      : "(no external API log entries yet)";
-  } catch (err) {
-    pre.textContent = String(err.message || err);
-  }
+  fetch(`${API}/research/${payload.run_id}/logs`)
+    .then((res) => res.json())
+    .then((body) => {
+      for (const entry of body.entries || []) {
+        pushLog("info", `run ${payload.run_id} · ${entry.kind || "log"}`, JSON.stringify(entry));
+      }
+    })
+    .catch((err) => pushLog("warn", "Could not load run logs", err.message || String(err)));
 }
 
 function showPriceGate(status) {
@@ -285,6 +455,8 @@ async function pollUntilDone(runId) {
     if (!res.ok) throw new Error(`Status check failed (${res.status})`);
     const data = await res.json();
     runStatus.textContent = `Status: ${data.status}`;
+    loadingDetail.textContent = `Status: ${data.status}`;
+    pushLog("info", `Research status ${data.status}`, runId);
     if (data.status === "awaiting_price_confirmation") {
       return data;
     }
@@ -300,6 +472,7 @@ async function confirmPrice(accept) {
   if (!activeRunId) return;
   priceYesBtn.disabled = true;
   priceNoBtn.disabled = true;
+  showLoading(accept ? "Continuing with degraded price…" : "Skipping forecast…");
   runStatus.textContent = accept ? "Continuing with degraded price…" : "Skipping forecast…";
   try {
     const res = await fetch(`${API}/research/${activeRunId}/confirm-price`, {
@@ -318,9 +491,13 @@ async function confirmPrice(accept) {
     if (!reportRes.ok) throw new Error(reportBody.detail || "Failed to load report");
     renderReport(reportBody);
     runStatus.textContent = "Completed";
+    finishLoading(true, "Completed");
+    hideLoadingSoon();
   } catch (err) {
     runError.textContent = String(err.message || err);
     runStatus.textContent = "Failed";
+    pushLog("error", "Price confirm failed", err.message || String(err));
+    finishLoading(false, String(err.message || err));
   } finally {
     priceYesBtn.disabled = false;
     priceNoBtn.disabled = false;
@@ -330,23 +507,15 @@ async function confirmPrice(accept) {
 priceYesBtn.addEventListener("click", () => confirmPrice(true));
 priceNoBtn.addEventListener("click", () => confirmPrice(false));
 
-document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    const name = btn.dataset.tab;
-    document.getElementById("tab-result").hidden = name !== "result";
-    document.getElementById("tab-logs").hidden = name !== "logs";
-  });
-});
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   runError.textContent = "";
   reportPanel.hidden = true;
   hidePriceGate();
   runBtn.disabled = true;
+  showLoading("Starting research…");
   runStatus.textContent = "Starting…";
+  pushLog("info", "Research started");
 
   const cryptocurrency = document.getElementById("cryptocurrency").value.trim();
   const period = document.getElementById("period").value;
@@ -373,6 +542,9 @@ form.addEventListener("submit", async (event) => {
 
     activeRunId = createBody.run_id;
     runStatus.textContent = `Queued ${activeRunId}`;
+    loadingDetail.textContent = `Queued ${activeRunId}`;
+    pushLog("info", "Research queued", activeRunId);
+
     const finalStatus = await pollUntilDone(activeRunId);
     if (finalStatus.status === "failed") {
       throw new Error(finalStatus.error_message || "Research failed");
@@ -380,9 +552,11 @@ form.addEventListener("submit", async (event) => {
     if (finalStatus.status === "awaiting_price_confirmation") {
       showPriceGate(finalStatus);
       runStatus.textContent = "Awaiting price confirmation";
+      finishLoading(true, "Awaiting price confirmation");
       const reportRes = await fetch(`${API}/research/${activeRunId}/report`);
       const reportBody = await reportRes.json();
       if (reportRes.ok) renderReport(reportBody);
+      pushLog("warn", "Awaiting price confirmation", activeRunId);
       return;
     }
 
@@ -393,14 +567,19 @@ form.addEventListener("submit", async (event) => {
     }
     renderReport(reportBody);
     runStatus.textContent = "Completed";
+    finishLoading(true, "Completed");
+    hideLoadingSoon();
+    pushLog("info", "Research completed", activeRunId);
   } catch (err) {
     runError.textContent = String(err.message || err);
     runStatus.textContent = "Failed";
+    finishLoading(false, String(err.message || err));
+    pushLog("error", "Research failed", err.message || String(err));
   } finally {
     runBtn.disabled = false;
     refreshHealth();
   }
 });
 
+pushLog("info", "UI session started");
 refreshHealth();
-setInterval(refreshHealth, 5000);

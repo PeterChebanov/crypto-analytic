@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from crypto_intel.db.repository import get_run
 from crypto_intel.db.session import session_scope
 from crypto_intel.domain.models import PriceConsensus, ResearchRequest, ResearchReport
+from crypto_intel.health import check_external_dependencies
 from crypto_intel.logging_ext.session_log import read_session_logs
 from crypto_intel.observability import configure_observability
 from crypto_intel.services.research import (
@@ -97,6 +98,12 @@ def ui_index() -> FileResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/health/dependencies")
+def health_dependencies() -> dict[str, Any]:
+    """Ping external venues used by collectors (for UI status lamp)."""
+    return check_external_dependencies()
 
 
 @app.post("/research", response_model=ResearchCreateResponse, status_code=202)

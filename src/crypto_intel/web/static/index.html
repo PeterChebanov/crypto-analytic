@@ -14,17 +14,18 @@
     <header>
       <div>
         <h1>CryptoIntel</h1>
-        <p class="sub">
-          Research brief + cautious Decision Card. Forecast mode adds an experimental TA layer.
-          Not financial advice. Empty focus → English; any language in focus → all output in that language.
-        </p>
       </div>
       <div class="stack-controls">
         <div id="apiBadge" class="badge"><span class="dot"></span> API: checking…</div>
-        <div id="launcherBadge" class="badge"><span class="dot"></span> Launcher: checking…</div>
-        <button type="button" class="secondary" id="startStackBtn">Start local stack</button>
+        <div class="header-actions">
+          <button type="button" class="secondary" id="logsBtn">Logs</button>
+          <button type="button" class="secondary" id="startStackBtn">Start local stack</button>
+        </div>
       </div>
     </header>
+
+    <div class="status-banner error" id="depsError" hidden></div>
+    <div class="status-banner warn" id="depsWarn" hidden></div>
 
     <section class="panel">
       <form id="researchForm">
@@ -46,7 +47,7 @@
             <label for="mode">Mode</label>
             <select id="mode" name="mode">
               <option value="analytics" selected>Analytics</option>
-              <option value="forecast">Forecast (experimental)</option>
+              <option value="forecast">Forecast</option>
             </select>
           </div>
         </div>
@@ -55,12 +56,8 @@
         <textarea
           id="question"
           name="question"
-          placeholder="Examples: price action only; купил ETH по 2800 — что делать; unlock risk"
+          placeholder="In position: coin, date, entry price. Flat: leave empty or add focus (e.g. unlock risk)."
         ></textarea>
-        <p class="hint">
-          Empty = English + default research path. Filled = analysis focus and output language.
-          In forecast mode, say if you already hold a position (bought when/price).
-        </p>
 
         <div class="actions">
           <button type="submit" id="runBtn">Run research</button>
@@ -68,6 +65,19 @@
         <p class="status-line" id="runStatus"></p>
         <p class="error" id="runError"></p>
       </form>
+    </section>
+
+    <section class="panel loading-panel" id="loadingPanel" hidden>
+      <div class="loading-row">
+        <div class="lamp-pair" aria-hidden="true">
+          <span class="lamp green" id="loadLampGreen"></span>
+          <span class="lamp red" id="loadLampRed"></span>
+        </div>
+        <div>
+          <h2 id="loadingTitle">Research in progress</h2>
+          <p class="status-line" id="loadingDetail">Working…</p>
+        </div>
+      </div>
     </section>
 
     <section class="panel" id="priceGatePanel" hidden>
@@ -81,53 +91,48 @@
     </section>
 
     <section class="panel report" id="reportPanel" hidden>
-      <div class="tabs">
-        <button type="button" class="tab active" data-tab="result">Result</button>
-        <button type="button" class="tab" data-tab="logs">Logs</button>
+      <div id="priceBadgeRow" class="badge-row" hidden></div>
+      <div id="stance" class="stance"></div>
+      <div class="meta" id="reportMeta"></div>
+      <h3>Brief</h3>
+      <p id="brief"></p>
+      <h3>Rationale</h3>
+      <p id="rationale"></p>
+      <h3>Invalidation</h3>
+      <ul id="invalidation"></ul>
+      <h3>Gaps</h3>
+      <ul id="gaps"></ul>
+      <h3>Risks &amp; catalysts</h3>
+      <ul id="risks"></ul>
+      <h3>Watchlist</h3>
+      <ul id="watchlist"></ul>
+
+      <div id="forecastBlock" hidden>
+        <h3>Forecast card</h3>
+        <div id="forecastCard" class="forecast-card"></div>
+        <h4>Horizons</h4>
+        <div id="forecastHorizons" class="horizons"></div>
+        <details class="forecast-json">
+          <summary>Raw forecast JSON</summary>
+          <pre id="forecastJson" class="logs"></pre>
+        </details>
       </div>
 
-      <div id="tab-result">
-        <div id="priceBadgeRow" class="badge-row" hidden></div>
-        <div id="stance" class="stance"></div>
-        <div class="meta" id="reportMeta"></div>
-        <h3>Brief</h3>
-        <p id="brief"></p>
-        <h3>Rationale</h3>
-        <p id="rationale"></p>
-        <h3>Invalidation</h3>
-        <ul id="invalidation"></ul>
-        <h3>Gaps</h3>
-        <ul id="gaps"></ul>
-        <h3>Risks &amp; catalysts</h3>
-        <ul id="risks"></ul>
-        <h3>Watchlist</h3>
-        <ul id="watchlist"></ul>
-
-        <div id="forecastBlock" hidden>
-          <h3>Forecast card</h3>
-          <div id="forecastCard" class="forecast-card"></div>
-          <h4>Horizons</h4>
-          <div id="forecastHorizons" class="horizons"></div>
-          <details class="forecast-json">
-            <summary>Raw forecast JSON</summary>
-            <pre id="forecastJson" class="logs"></pre>
-          </details>
-        </div>
-
-        <h3>Facts</h3>
-        <div class="facts" id="facts"></div>
-      </div>
-
-      <div id="tab-logs" hidden>
-        <pre id="logsPre" class="logs"></pre>
-      </div>
+      <h3>Facts</h3>
+      <div class="facts" id="facts"></div>
     </section>
-
-    <p class="disclaimer">
-      First launch: keep Docker Desktop running, then click <strong>Start local stack</strong>
-      (needs local launcher on port 7911 — started by <code>Start.command</code> / <code>scripts/start.sh</code>).
-    </p>
   </div>
+
+  <div class="logs-window" id="logsWindow" hidden>
+    <div class="logs-window-panel">
+      <div class="logs-window-head">
+        <h2>Session logs</h2>
+        <button type="button" class="secondary" id="logsCloseBtn">Close</button>
+      </div>
+      <div id="sessionLogsView" class="session-logs"></div>
+    </div>
+  </div>
+
   <script src="/static/app.js"></script>
 </body>
 </html>

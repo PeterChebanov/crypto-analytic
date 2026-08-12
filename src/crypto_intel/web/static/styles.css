@@ -82,6 +82,161 @@ h1 {
 
 .badge.ok .dot { background: var(--accent-2); }
 .badge.bad .dot { background: var(--danger); }
+.badge.warn .dot { background: var(--warn); }
+.badge.blink .dot {
+  animation: lamp-blink 0.55s ease-in-out infinite;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.status-banner-label {
+  display: block;
+  font-size: 2.7rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.45rem;
+}
+
+.status-banner-body {
+  white-space: pre-wrap;
+  margin-bottom: 0.55rem;
+}
+
+.status-banner-action {
+  white-space: pre-wrap;
+  opacity: 0.95;
+}
+
+.status-banner.error {
+  background: #3a1818;
+  color: #f0a0a0;
+}
+
+.status-banner.warn {
+  background: #3a2e14;
+  color: #f0d38a;
+}
+
+.loading-panel {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.loading-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.loading-panel h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.lamp-pair {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.lamp {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #2a3648;
+  opacity: 0.35;
+}
+
+.lamp.green { background: var(--accent-2); }
+.lamp.red { background: var(--danger); }
+
+.lamp.on {
+  opacity: 1;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.lamp.blink {
+  opacity: 1;
+  animation: lamp-blink 0.55s ease-in-out infinite;
+}
+
+@keyframes lamp-blink {
+  0%, 100% { opacity: 0.25; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.logs-window {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(4, 10, 18, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.logs-window[hidden] {
+  display: none !important;
+}
+
+.logs-window-panel {
+  width: min(920px, 100%);
+  max-height: min(80vh, 720px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.logs-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.logs-window-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.session-logs {
+  padding: 0.85rem 1rem 1.1rem;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  background: #0c1219;
+  color: #e7ecf3;
+}
+
+.session-logs .log-line {
+  margin-bottom: 0.35rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.session-logs .log-line.warn { color: var(--warn); }
+.session-logs .log-line.error { color: var(--danger); }
+.session-logs .log-line.info { color: #e7ecf3; }
 
 .panel {
   background: color-mix(in srgb, var(--panel) 92%, black);
