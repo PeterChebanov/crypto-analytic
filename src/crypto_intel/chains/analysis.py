@@ -5,6 +5,7 @@ from __future__ import annotations
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import Runnable
 
+from crypto_intel.domain.language import language_instruction
 from crypto_intel.domain.models import AnalysisDraft, Fact
 from crypto_intel.llm.client import build_xai_chat_model
 from crypto_intel.prompts.analysis import build_analysis_prompt, format_evidence
@@ -37,6 +38,7 @@ def analyze_evidence(
             "period": period,
             "question": normalize_question(question),
             "evidence": format_evidence(facts),
+            "language_rule": language_instruction(question),
         },
     )
     if not isinstance(result, AnalysisDraft):

@@ -23,3 +23,15 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+
+# Local launcher / API process files
+.api.pid
+.api.log
+.launcher.pid
+.launcher.log
+
+# Session external API logs
+logs/
+
+# Local run dumps
+.last_forecast_report.json

@@ -22,34 +22,46 @@ Template for each entry:
 
 ## Current position
 
-- **Stage:** 3 — LangChain building blocks → **DONE**
-- **Next stage:** 4 — LangGraph orchestrator MVP core
-- **Provider:** xAI Grok — `XAI_API_KEY`, `XAI_BASE_URL`, model `grok-4.5`
-- **MVP:** not complete (Stages 4–7 remain)
-- **Post-MVP 1 / 2:** locked until MVP DoD
-- **Policy:** production-first (no throwaway demos)
-- **Docs ownership:** agent updates `docs/PROGRESS.md` after each teaching step / chunk (student asked 2026-07-30)
+- **Goal:** Full MVP + forecast/language/price-consensus extensions (in progress for real-world testing)
+- **How to run:** see root `README.md` / `Start.command`
+- **Provider:** xAI Grok
+- **Collectors:** `USE_MOCK_TOOLS=true` by default; set `false` for live venues
+- **Next:** optional live Forecast retest after Decision Card ↔ enter coherence; CryptoCompare news 401 separately
+
+### Locked: Analytics ↔ Forecast coherence (2026-08-12)
+
+- New entry only if Decision Card stance is **`accumulate`** AND TA R:R ≥ 1:3 AND structure OK.
+- `avoid` / `reduce` / `hold` → never open new risk (`hold` = no new risk).
+- In-position add-on only on `accumulate`; `avoid`/`reduce` → exit/reduce paths.
+- Bundle fields: `final_verdict` (`enter_long` | `do_not_enter`), `trade.blocked_by_decision`.
+- Module: `forecast/coherence.py`; enforced in `forecast/engine.py` (rules + LLM finalize).
+
+### Locked: TA number contract (2026-08-12)
+
+- Root guide: `FORECAST_READING.md` (how to run, JSON glossary, LLM open issues).
+- Forecast JSON includes `ta_contract` and `trade.take_profit_source`.
+- Chart-scale gate: stop ≥ 10% of period H/L (`scale_ok` / `blocked_by_scale`); R:R after rounded levels.
+- `estimated_playout` = setup duration estimate; analysis lookback ≠ hold time.
+- Read order: Decision Card → coherence → R:R + scale → `final_verdict`.
+
+### MVP DoD checklist
+
+- [x] E2E path: API → graph → brief + decision card + facts in Postgres (`run_id` on finalize)
+- [x] LangGraph conditional edges + checkpoint resume (InMemorySaver test)
+- [x] LangSmith hook (enable via `LANGSMITH_TRACING` + key)
+- [x] Redis cache (market) + daily research lock
+- [x] News + Market tools (live behind flag; mock default)
+- [x] Critic rejects news without `source_url` (evals)
+- [x] Docker Compose + English README + curl demo path
+- [x] Docs/PROGRESS updated
+- [x] Mode `analytics` | `forecast`; focus language; multi-source price gate; session logs UI
 
 ### Resume checklist (new chat)
 
-1. Read `docs/START_HERE.md` — Production-first policy.
-2. Re-read `.cursor/rules/engineering-bar.mdc`.
-3. Confirm green: `uv run pytest tests/ -v` (**25 passed** as of Stage 3 close).
-4. Start **Stage 4 / Teaching Step 1** (LangGraph architecture: state, nodes, edges, checkpoints).
-
-### What exists in the repo now
-
-| Piece | Path | Notes |
-|-------|------|--------|
-| Domain | `src/crypto_intel/domain/` | contracts + `AnalysisDraft` |
-| Settings | `src/crypto_intel/settings.py` | slices: `postgres`, `redis`, `xai` |
-| DB | `src/crypto_intel/db/` | session, ORM, repository |
-| LLM client | `src/crypto_intel/llm/client.py` | `build_xai_chat_model()` |
-| DecisionCard gen | `src/crypto_intel/llm/decision_card.py` | structured output + retry |
-| Prompts | `src/crypto_intel/prompts/` | planner + analysis templates |
-| Tools | `src/crypto_intel/tools/` | market + news (mocks), registry, `ToolExecutor` / `run_tool_loop` |
-| Chains | `src/crypto_intel/chains/` | `plan_collection`, `analyze_evidence` |
-| Tests | `tests/` | domain, repository, decision_card, tool_executor, registry, prompts, chains — **25 passed** |
+1. `uv run pytest tests/ -v`
+2. `docker compose up -d && uv run alembic upgrade head`
+3. `./scripts/start.sh` or `Start.command`, then open UI
+4. Try Forecast mode + Russian focus; check Logs tab
 
 ### Important lessons locked (do not re-teach from zero)
 
@@ -64,6 +76,7 @@ Template for each entry:
 - **Registry** is the single allowlist + `tools_description` source for planner; Stage 5 swaps tool bodies behind the same names.
 - **AnalysisDraft** + `DecisionCard` stay separate; `ResearchReport` assembles them later in the graph.
 - Field naming must match domain contracts (`gaps`, not typos like `agps`).
+- **Price consensus:** ≤0.25% OK, 0.25–1% WARN (UI), >1% HARD skip; 1/3 → await confirm.
 
 ### Naming locked
 
@@ -73,6 +86,119 @@ Template for each entry:
 ---
 
 ## Entries
+
+## 2026-08-12 — Forecast TA fundamentals + R:R 1:3 gate
+
+- Status: done
+- History: Binance OHLCV → ATR, swing S/R, volume confirm
+- Derivatives: Binance futures OI Δ + funding (soft-fail if unavailable)
+- Hard gate: `enter` only if reward/risk ≥ 3.0; post-LLM enforce
+- `setup_score` confluence (not ML probability); LLM formats only
+- Verify: `uv run pytest tests/ -v` → 51 passed
+
+## 2026-08-12 — Forecast mode, language, price consensus, session logs
+
+- Status: done (code)
+- Mode dropdown: analytics | forecast (experimental)
+- Language: empty focus → English; otherwise match focus language in prompts/DecisionCard/forecast
+- Prices: Binance + Kraken + CoinGecko parallel → median; ≤0.25% OK, 0.25–1% WARN (UI), >1% HARD skip; 1/3 → awaiting Yes/No
+- Session JSONL under `logs/sessions/` + UI Logs tab
+- Verify with: `uv run pytest tests/ -v`
+
+## 2026-08-12 — Minimal UI + one-click local start
+
+- Status: done
+- UI: `/` form — cryptocurrency, timeframe, optional focus (`question`); polls report
+- Launcher: `scripts/local_launcher.py` on `:7911`; UI button **Start local stack**
+- One-click: `Start.command` / `scripts/start.sh` (Docker Desktop must already be running)
+- Note: browser cannot cold-start Docker; launcher is the bridge
+- Verify: `uv run pytest tests/ -v`; double-click Start.command
+
+## 2026-08-12 — Full MVP ship for real-world testing
+
+- Status: done (MVP code path)
+- Ownership: agent implemented application code (student requested)
+- Implemented:
+  - Stage 4: checkpointer resume, JSON-serializable graph state, logging in nodes, fixed `revision_loops` typo
+  - Stage 5: Redis client/locks, `USE_MOCK_TOOLS`, CoinGecko market + cache, CryptoCompare news
+  - Stage 6: critique evals, LangSmith bootstrap (`observability.py`)
+  - Stage 7: FastAPI `/research`, scheduler skeleton, README curl path
+- Tests: `uv run pytest tests/ -v` → **35 passed**
+- Verify with: README bootstrap + `uvicorn crypto_intel.api.app:app --reload --port 8000`
+- Next: student real-world test; then minimal UI
+
+## 2026-08-12 — Decision: full MVP then minimal UI
+
+- Status: done (superseded by ship entry above)
+- Decision: full MVP DoD; UI after API exists
+
+## 2026-08-06 — Stage 4 / checkpointer + resume
+
+- Status: in_progress (re-opened 2026-08-12 — code not landed yet)
+- Next: student applies builder + test_graph changes
+
+## 2026-08-06 — Stage 4 / conditional edges + max revision loops
+
+- Status: done
+- Implemented: `routing.py`, critique bumps `revision_loops`, conditional edges, `test_routing.py`
+- Next: checkpointer
+
+## 2026-08-06 — Stage 4 / file #3 done → test linear graph
+
+- Status: done
+- Implemented: `tests/test_graph.py` green (student confirmed)
+- Next: conditional edges
+
+## 2026-08-06 — Stage 4 / file #3 — linear graph builder
+
+- Status: done
+- Fixed: `model: ... | None = None` (was `:` typo); full builder body restored
+- Verify: `build_research_graph()` compiles
+- Next: test with fake model
+
+## 2026-08-06 — Stage 4 / file #2 review — node.py blockers
+
+- Status: done (student confirmed checks passed)
+- Fixed: turtle/RunnableConfig removed; source_type; fetch_news; market facts list; market invoke args; change_24h_pct
+- Note: finalize still typed with `BaseModel` — fix alongside file #3
+- Next: was file #3
+
+- Status: in_progress
+- File #1: `graph/state.py` fixed (`cryptocurrency` confirmed via import smoke)
+- Delivering in chat: `src/crypto_intel/graph/nodes.py` — thin wrappers over chains/tools/llm/db
+- Verify with: `uv run python -c "from crypto_intel.graph.nodes import build_research_nodes; print(sorted(build_research_nodes()))"`
+- Next: after confirm → file #3 linear `graph/builder.py` (or `graph.py`)
+
+## 2026-08-04 — Stage 4 / file #1 review — state.py needs fix before nodes
+
+- Status: done
+- Issue fixed: `cryptocurrency` field present; termios import removed; `__init__.py` added
+- Next: file #2 `nodes.py`
+
+## 2026-08-04 — Stage 4 / Teaching Step 3 — deps + file #1 GraphState
+
+- Status: in_progress (file #1 present but needs correction)
+- Understood architecture: yes
+- Understood theory: yes (Step 2 confirmed)
+- Implemented: `langgraph` dep; `graph/__init__.py`; `graph/state.py` (needs typo/import fix)
+- Verify with: `uv run python -c "from crypto_intel.graph.state import GraphState; print(sorted(GraphState.__annotations__))"` — must show `cryptocurrency`, not `crtptocurrency`
+- Next: fix state → file #2 nodes
+
+## 2026-08-04 — Stage 4 / Teaching Step 1 done → Step 2 theory
+
+- Status: done
+- Understood architecture: yes
+- Understood theory: yes
+- Implemented: nothing (theory only)
+- Next: Step 3 — `uv add langgraph` + `graph/state.py`
+
+## 2026-07-31 — Stage 4 / Teaching Step 1 — LangGraph architecture
+
+- Status: done (closed 2026-08-04)
+- Understood architecture: yes
+- Understood theory: deferred to Step 2
+- Implemented: nothing (architecture + product-flow review only)
+- Next: was Step 2
 
 ## 2026-07-30 — Stage 3 complete — LangChain building blocks
 

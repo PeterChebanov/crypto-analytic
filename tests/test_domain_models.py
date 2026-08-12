@@ -20,6 +20,8 @@ def test_research_request_ok() -> None:
     assert req.cryptocurrency == "ETH"
     assert req.period == "7d"
     assert req.question is None
+    assert req.mode.value == "analytics"
+    assert req.accept_degraded_price is False
 
 
 def test_research_request_rejects_empty_cryptocurrency() -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from crypto_intel.domain.language import language_instruction
 from crypto_intel.domain.models import DecisionCard, Fact
 from crypto_intel.llm.client import build_xai_chat_model
 
@@ -20,15 +21,20 @@ def generate_decision_card(
     cryptocurrency: str,
     period: str,
     facts: list[Fact],
+    question: str | None = None,
     model: BaseChatModel | None = None,
 ) -> DecisionCard:
- 
     chat_model = model or build_xai_chat_model()
     structured_model = chat_model.with_structured_output(
         DecisionCard,
         method="json_schema",
     )
-    messages = _build_messages(cryptocurrency=cryptocurrency, period=period, facts=facts)
+    messages = _build_messages(
+        cryptocurrency=cryptocurrency,
+        period=period,
+        facts=facts,
+        question=question,
+    )
 
     last_error: Exception | None = None
     for _ in range(_MAX_ATTEMPTS):
@@ -51,8 +57,10 @@ def _build_messages(
     cryptocurrency: str,
     period: str,
     facts: list[Fact],
+    question: str | None,
 ) -> list[SystemMessage | HumanMessage]:
     evidence_block = _format_facts(facts)
+    lang = language_instruction(question)
     return [
         SystemMessage(
             content=(
@@ -60,14 +68,18 @@ def _build_messages(
                 "Produce a cautious DecisionCard based only on the supplied evidence. "
                 "Do not predict prices. "
                 "Choose stance from: accumulate, hold, reduce, avoid. "
+                "If the focus says the user already holds a position, prefer hold/reduce/avoid "
+                "guidance for an existing position; otherwise treat as whether to enter. "
                 "confidence must be between 0 and 1. "
-                "invalidation must list concrete events that would change the stance."
+                "invalidation must list concrete events that would change the stance. "
+                f"{lang}"
             ),
         ),
         HumanMessage(
             content=(
                 f"Cryptocurrency: {cryptocurrency}\n"
-                f"Period: {period}\n\n"
+                f"Period: {period}\n"
+                f"Focus: {question or '(none)'}\n\n"
                 f"Evidence:\n{evidence_block}\n\n"
                 "Return a DecisionCard."
             ),

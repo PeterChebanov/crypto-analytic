@@ -1,27 +1,23 @@
-"""News headlines tool. Mock body for now; Stage 5 swaps implementation."""
+"""News headlines tool. Mock or live CryptoCompare headlines."""
 
 from __future__ import annotations
 
+import logging
+
+import httpx
 from langchain_core.tools import tool
 
+from crypto_intel.logging_ext.context import get_session_logger
+from crypto_intel.settings import get_settings
+from crypto_intel.tools.symbols import normalize_symbol
+
+logger = logging.getLogger(__name__)
+
 _MAX_HEADLINES = 10
+_CRYPTOCOMPARE_NEWS_URL = "https://min-api.cryptocompare.com/data/v2/news/"
 
 
-@tool
-def fetch_news(cryptocurrency: str, limit: int = 5) -> str:
-    """Fetch recent news headlines for a cryptocurrency symbol.
-
-    Args:
-        cryptocurrency: Asset symbol, e.g. BTC or ETH.
-        limit: Maximum headlines to return (1–10).
-    """
-    symbol = cryptocurrency.strip().upper()
-    if not symbol:
-        raise ValueError("cryptocurrency must not be empty")
-
-    capped_limit = max(1, min(limit, _MAX_HEADLINES))
-
-    # Mock data — replace with real HTTP in Stage 5. Always include source_url.
+def _mock_news_payload(symbol: str, limit: int) -> str:
     headlines = [
         (
             f"title={symbol} holds steady amid macro uncertainty; "
@@ -42,6 +38,80 @@ def fetch_news(cryptocurrency: str, limit: int = 5) -> str:
             f"source=mock_news"
         ),
     ]
+    return "\n".join(headlines[:limit])
 
-    selected = headlines[:capped_limit]
-    return "\n".join(selected)
+
+def _fetch_live_news_payload(symbol: str, limit: int) -> str:
+    response = httpx.get(
+        _CRYPTOCOMPARE_NEWS_URL,
+        params={"lang": "EN", "categories": symbol},
+        timeout=15.0,
+    )
+    response.raise_for_status()
+    body = response.json()
+    items = body.get("Data") or []
+    lines: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or "").strip()
+        summary = str(item.get("body") or item.get("title") or "").strip()
+        url = str(item.get("url") or "").strip()
+        if not title or not summary or not url:
+            continue
+        # Keep summaries short for prompt budgets.
+        if len(summary) > 280:
+            summary = summary[:277] + "..."
+        lines.append(
+            f"title={title}; summary={summary}; "
+            f"source_url={url}; source=cryptocompare"
+        )
+        if len(lines) >= limit:
+            break
+    if not lines:
+        raise ValueError(f"No news headlines returned for {symbol}")
+    return "\n".join(lines)
+
+
+@tool
+def fetch_news(cryptocurrency: str, limit: int = 5) -> str:
+    """Fetch recent news headlines for a cryptocurrency symbol.
+
+    Args:
+        cryptocurrency: Asset symbol, e.g. BTC or ETH.
+        limit: Maximum headlines to return (1–10).
+    """
+    symbol = normalize_symbol(cryptocurrency)
+    capped_limit = max(1, min(limit, _MAX_HEADLINES))
+    session_logger = get_session_logger()
+
+    if get_settings().use_mock_tools:
+        payload = _mock_news_payload(symbol, capped_limit)
+        if session_logger is not None:
+            session_logger.log(
+                kind="news",
+                source="mock",
+                request={"symbol": symbol, "limit": capped_limit},
+                response={"lines": len(payload.splitlines())},
+            )
+        return payload
+    try:
+        payload = _fetch_live_news_payload(symbol, capped_limit)
+        if session_logger is not None:
+            session_logger.log(
+                kind="news",
+                source="cryptocompare",
+                request={"symbol": symbol, "limit": capped_limit},
+                response={"lines": len(payload.splitlines())},
+            )
+        return payload
+    except Exception as exc:
+        logger.exception("live news fetch failed for %s; falling back to mock", symbol)
+        if session_logger is not None:
+            session_logger.log(
+                kind="news",
+                source="cryptocompare",
+                request={"symbol": symbol, "limit": capped_limit},
+                error=str(exc),
+            )
+        return _mock_news_payload(symbol, capped_limit)

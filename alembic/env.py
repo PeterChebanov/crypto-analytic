@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Prefer app settings over a hardcoded URL in alembic.ini
-config.set_main_option("sqlalchemy.url", get_settings().posgres.url)
+config.set_main_option("sqlalchemy.url", get_settings().postgres.url)
 
 
 def run_migrations_offline() -> None:

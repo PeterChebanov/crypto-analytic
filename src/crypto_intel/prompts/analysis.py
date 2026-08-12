@@ -18,6 +18,7 @@ Rules:
 - risks_and_catalysts: concrete headwinds and tailwinds grounded in the evidence.
 - watchlist: specific metrics, events, or sources to monitor next.
 - brief: 2–5 sentences in plain language; cautious tone.
+- {language_rule}
 
 Output JSON with exactly these keys:
 - brief: string
@@ -60,4 +61,6 @@ def format_evidence(facts: list[Fact]) -> str:
             f"   summary: {fact.summary}\n"
             f"   source_url: {source_url}"
         )
+   
     return "\n".join(lines)
+    

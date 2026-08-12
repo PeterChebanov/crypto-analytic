@@ -21,12 +21,14 @@ def test_planner_prompt_renders_variables() -> None:
         period="7d",
         question=normalize_question(None),
         tools_description="- get_market_snapshot: price\n- fetch_news: headlines",
+        language_rule="Language: write ALL user-facing text in English (focus was empty).",
     )
     system_text = str(messages[0].content)
     human_text = str(messages[1].content)
 
     assert "get_market_snapshot" in system_text
     assert "fetch_news" in system_text
+    assert "English" in system_text
     assert "Cryptocurrency: BTC" in human_text
     assert "Period: 7d" in human_text
     assert "(no specific focus)" in human_text
@@ -47,9 +49,12 @@ def test_analysis_prompt_renders_evidence() -> None:
         period="7d",
         question=normalize_question("ETF flows"),
         evidence=format_evidence(facts),
+        language_rule="Language: write ALL user-facing text in the SAME language as this focus text.",
     )
     human_text = str(messages[1].content)
+    system_text = str(messages[0].content)
 
+    assert "SAME language" in system_text
     assert "Cryptocurrency: BTC" in human_text
     assert "ETF flows" in human_text
     assert "ETF flows mixed" in human_text

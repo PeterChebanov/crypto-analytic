@@ -17,6 +17,7 @@ Rules:
 - Each step must be concrete: what to fetch and what to look for.
 - Output a plain-text bullet list only. One step per line, each line starting with "- ".
 - Do not invent tool names that are not listed above.
+- {language_rule}
 """
 
 _PLANNER_HUMAN = """Cryptocurrency: {cryptocurrency}

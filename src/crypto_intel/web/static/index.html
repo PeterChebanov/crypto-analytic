@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CryptoIntel Research</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Serif:wght@600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>CryptoIntel</h1>
+        <p class="sub">
+          Research brief + cautious Decision Card. Forecast mode adds an experimental TA layer.
+          Not financial advice. Empty focus → English; any language in focus → all output in that language.
+        </p>
+      </div>
+      <div class="stack-controls">
+        <div id="apiBadge" class="badge"><span class="dot"></span> API: checking…</div>
+        <div id="launcherBadge" class="badge"><span class="dot"></span> Launcher: checking…</div>
+        <button type="button" class="secondary" id="startStackBtn">Start local stack</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <form id="researchForm">
+        <div class="row three">
+          <div>
+            <label for="cryptocurrency">Cryptocurrency</label>
+            <input id="cryptocurrency" name="cryptocurrency" value="ETH" required maxlength="16" />
+          </div>
+          <div>
+            <label for="period">Research timeframe</label>
+            <select id="period" name="period">
+              <option value="1d">1 day</option>
+              <option value="7d" selected>7 days</option>
+              <option value="14d">14 days</option>
+              <option value="30d">30 days</option>
+            </select>
+          </div>
+          <div>
+            <label for="mode">Mode</label>
+            <select id="mode" name="mode">
+              <option value="analytics" selected>Analytics</option>
+              <option value="forecast">Forecast (experimental)</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="question">Focus (optional)</label>
+        <textarea
+          id="question"
+          name="question"
+          placeholder="Examples: price action only; купил ETH по 2800 — что делать; unlock risk"
+        ></textarea>
+        <p class="hint">
+          Empty = English + default research path. Filled = analysis focus and output language.
+          In forecast mode, say if you already hold a position (bought when/price).
+        </p>
+
+        <div class="actions">
+          <button type="submit" id="runBtn">Run research</button>
+        </div>
+        <p class="status-line" id="runStatus"></p>
+        <p class="error" id="runError"></p>
+      </form>
+    </section>
+
+    <section class="panel" id="priceGatePanel" hidden>
+      <h2>Price source warning</h2>
+      <p id="priceGateMessage"></p>
+      <div id="priceQuotes" class="price-quotes"></div>
+      <div class="actions">
+        <button type="button" id="priceYesBtn">Yes, continue with one source</button>
+        <button type="button" class="secondary" id="priceNoBtn">No, skip forecast</button>
+      </div>
+    </section>
+
+    <section class="panel report" id="reportPanel" hidden>
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="result">Result</button>
+        <button type="button" class="tab" data-tab="logs">Logs</button>
+      </div>
+
+      <div id="tab-result">
+        <div id="priceBadgeRow" class="badge-row" hidden></div>
+        <div id="stance" class="stance"></div>
+        <div class="meta" id="reportMeta"></div>
+        <h3>Brief</h3>
+        <p id="brief"></p>
+        <h3>Rationale</h3>
+        <p id="rationale"></p>
+        <h3>Invalidation</h3>
+        <ul id="invalidation"></ul>
+        <h3>Gaps</h3>
+        <ul id="gaps"></ul>
+        <h3>Risks &amp; catalysts</h3>
+        <ul id="risks"></ul>
+        <h3>Watchlist</h3>
+        <ul id="watchlist"></ul>
+
+        <div id="forecastBlock" hidden>
+          <h3>Forecast card</h3>
+          <div id="forecastCard" class="forecast-card"></div>
+          <h4>Horizons</h4>
+          <div id="forecastHorizons" class="horizons"></div>
+          <details class="forecast-json">
+            <summary>Raw forecast JSON</summary>
+            <pre id="forecastJson" class="logs"></pre>
+          </details>
+        </div>
+
+        <h3>Facts</h3>
+        <div class="facts" id="facts"></div>
+      </div>
+
+      <div id="tab-logs" hidden>
+        <pre id="logsPre" class="logs"></pre>
+      </div>
+    </section>
+
+    <p class="disclaimer">
+      First launch: keep Docker Desktop running, then click <strong>Start local stack</strong>
+      (needs local launcher on port 7911 — started by <code>Start.command</code> / <code>scripts/start.sh</code>).
+    </p>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

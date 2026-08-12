@@ -5,6 +5,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import Runnable
 
+from crypto_intel.domain.language import language_instruction
 from crypto_intel.llm.client import build_xai_chat_model
 from crypto_intel.prompts.planner import build_planner_prompt, normalize_question
 from crypto_intel.tools.registry import format_tools_description
@@ -20,7 +21,7 @@ def plan_collection(
     *,
     cryptocurrency: str,
     period: str,
-    question:  str | None = None,
+    question: str | None = None,
     model: BaseChatModel | None = None
 ) -> str:
     """Run the planner chain and return the collection plan as plain text"""
@@ -31,6 +32,7 @@ def plan_collection(
             "period": period,
             "question": normalize_question(question),
             "tools_description": format_tools_description(),
+            "language_rule": language_instruction(question),
         },
     )
     if not isinstance(response, AIMessage):
